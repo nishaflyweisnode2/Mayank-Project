@@ -190,6 +190,15 @@ var userSchema = new schema(
         servieImages: {
             type: Array
         },
+        occupation: [{ type: mongoose.Schema.ObjectId, ref: 'mainCategory' }],
+        //Work Experience
+        year: {
+            type: String
+        },
+        month: {
+            type: String
+        },
+        role: [{ type: mongoose.Schema.ObjectId, ref: 'mainCategory' }],
     },
     { timestamps: true }
 );

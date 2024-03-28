@@ -7,11 +7,19 @@ const { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUploa
 const express = require("express");
 const app = express()
 module.exports = (app) => {
-        app.post("/api/v1/partner/registration", auth.partnerRegistration);
+        app.post("/api/v1/partner/registration", [authJwt.verifyToken], auth.registration);
+        app.post("/api/v1/partner/socialLogin", auth.socialLogin);
+        app.post("/api/v1/partner/loginWithPhone", auth.loginWithPhone);
         app.post("/api/v1/partner/:id", auth.verifyOtp);
-        app.put("/api/v1/partner/changePassword", [authJwt.verifyToken], auth.changePassword);
-        app.post("/api/v1/partner-signin", auth.signin);
-        app.post("/api/v1/partner/reset/Password", auth.reSetPassword);
+        app.post("/api/v1/partner/resendOtp/:id", auth.resendOTP);
+        app.get("/api/v1/partner/getProfile", [authJwt.verifyToken], auth.getProfile);
+        app.put("/api/v1/partner/updateProfile", [authJwt.verifyToken], userProfileUpload.single('image'), auth.updateProfile);
+        app.put("/api/v1/partner/updateLocation", [authJwt.verifyToken], auth.updateLocation);
+        app.post("/api/v1/partner/address/new", [authJwt.verifyToken], auth.createAddress);
+        app.get("/api/v1/partner/getAddress", [authJwt.verifyToken], auth.getallAddress);
+        app.put("/api/v1/partner/address/:id", [authJwt.verifyToken], auth.updateAddress)
+        app.delete('/api/v1/partner/address/:id', [authJwt.verifyToken], auth.deleteAddress);
+        app.get('/api/v1/partner/address/:id', [authJwt.verifyToken], auth.getAddressbyId);
         app.get('/api/v1/partner/getAllOrders', [authJwt.verifyToken], auth.getAllOrders);
         app.get('/api/v1/partner/getTodayOrders', [authJwt.verifyToken], auth.getTodayOrders);
         app.get('/api/v1/partner/getTomorrowOrders', [authJwt.verifyToken], auth.getTomorrowOrders);
