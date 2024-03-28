@@ -1,6 +1,6 @@
 const auth = require("../controllers/userController");
 const authJwt = require("../middlewares/authJwt");
-const { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, userProfileUpload, testimonial } = require('../middlewares/imageUpload')
+const { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, userProfileUpload, testimonial, petImageUpload } = require('../middlewares/imageUpload')
 const express = require("express");
 const router = express()
 module.exports = (app) => {
@@ -92,6 +92,10 @@ module.exports = (app) => {
         app.get("/api/v1/user/Banner/all/staticBanner", [authJwt.verifyToken], auth.getStaticBanner);
         app.put('/api/v1/user/updateCartPackageEdit', [authJwt.verifyToken], auth.updateEditPackageInCart);
         app.put('/api/v1/user/updateCustomizePackageInCart', [authJwt.verifyToken], auth.updateCustomizePackageInCart);
-
+        app.post('/api/v1/user/pets/add', [authJwt.verifyToken], petImageUpload.single('image'), auth.createPet);
+        app.get('/api/v1/user/pets', [authJwt.verifyToken], auth.getPets);
+        app.get('/api/v1/user/pets/:id', [authJwt.verifyToken], auth.getPetById);
+        app.put('/api/v1/user/pets/:id', [authJwt.verifyToken], petImageUpload.single('image'), auth.updatePet);
+        app.delete('/api/v1/user/pets/:id', [authJwt.verifyToken], auth.deletePet);
 
 }

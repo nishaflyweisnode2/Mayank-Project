@@ -32,6 +32,7 @@ const banner = require('../models/banner/banner');
 const { charges } = require("../middlewares/imageUpload");
 const Slot = require('../models/SlotModel');
 const moment = require('moment');
+const Pet = require('../models/petModel');
 
 
 
@@ -5380,4 +5381,123 @@ function calculateServices2Total(services) {
         console.log("Total Service Price:", total);
         return total;
 }
+
+exports.createPet = async (req, res) => {
+        try {
+                const { petName, breed, age, gender } = req.body;
+                const userId = req.user._id;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let image;
+                if (req.file) {
+                        image = req.file.path
+                }
+
+                const newPet = await Pet.create({
+                        user: userId,
+                        petName,
+                        breed,
+                        image: image,
+                        age,
+                        gender
+                });
+
+                return res.status(201).json({ status: 201, data: newPet });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, message: 'Server Error' });
+        }
+};
+
+exports.getPets = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                const pets = await Pet.find({ user: userId });
+
+                return res.status(200).json({ status: 200, data: pets });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, message: 'Server Error' });
+        }
+};
+
+exports.getPetById = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                const pet = await Pet.findById(req.params.id);
+                if (!pet) {
+                        return res.status(404).json({ status: 404, message: 'Pet not found' });
+                }
+                return res.status(200).json({ status: 200, data: pet });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, message: 'Server Error' });
+        }
+};
+
+exports.updatePet = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let imageData;
+                if (req.file) {
+                        imageData = req.file.path;
+                }
+
+                const pet = await Pet.findByIdAndUpdate(req.params.id, { ...req.body, image: imageData }, {
+                        new: true,
+                        runValidators: true
+                });
+
+                if (!pet) {
+                        return res.status(404).json({ status: 404, message: 'Pet not found' });
+                }
+
+                return res.status(200).json({ status: 200, data: pet });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, message: 'Server Error' });
+        }
+};
+
+exports.deletePet = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                const pet = await Pet.findByIdAndDelete(req.params.id);
+                if (!pet) {
+                        return res.status(404).json({ status: 404, message: 'Pet not found' });
+                }
+                res.status(200).json({ status: 200, message: 'Pet deleted successfully' });
+        } catch (error) {
+                console.error(error);
+                res.status(500).json({ status: 500, message: 'Server Error' });
+        }
+};
 
