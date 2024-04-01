@@ -101,6 +101,7 @@ const storage19 = new CloudinaryStorage({
     },
 });
 const petImageUpload = multer({ storage: storage19 });
+const storage20 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/Breed", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
+const BreedUpload = multer({ storage: storage20 });
 
-
-module.exports = { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, E4UUpload, userProfileUpload, BrandUpload, offerUpload, spAgreementUpload, transportationCharges, complaintSuggestion, testimonial, charges, serviceType, subCategory, mainCategoryBannerUpload, petImageUpload };
+module.exports = { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, E4UUpload, userProfileUpload, BrandUpload, offerUpload, spAgreementUpload, transportationCharges, complaintSuggestion, testimonial, charges, serviceType, subCategory, mainCategoryBannerUpload, petImageUpload, BreedUpload };

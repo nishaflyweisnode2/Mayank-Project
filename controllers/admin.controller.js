@@ -44,6 +44,7 @@ const MainCategoryBanner = require('../models/banner/mainCategoryBanner');
 const Testimonial = require("../models/testimonial");
 const Slot = require('../models/SlotModel');
 const moment = require('moment');
+const Breed = require('../models/breedModel');
 
 
 
@@ -175,6 +176,79 @@ exports.removeBrand = async (req, res) => {
     } else {
         await Brand.findByIdAndDelete(category._id);
         return res.status(200).json({ message: "Brand Deleted Successfully !" });
+    }
+};
+exports.createBreed = async (req, res) => {
+    try {
+        let findBreed = await Breed.findOne({ name: req.body.name });
+        if (findBreed) {
+            return res.status(409).json({ message: "Breed already exit.", status: 404, data: {} });
+        } else {
+            let fileUrl;
+            if (req.file) {
+                fileUrl = req.file ? req.file.path : "";
+            }
+
+            const data = { name: req.body.name, description: req.body.description, status: req.body.status, image: fileUrl };
+            const breed = await Breed.create(data);
+            return res.status(200).json({ message: "Breed add successfully.", status: 200, data: breed });
+        }
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: "internal server error ", data: error.message, });
+    }
+};
+exports.getBreeds = async (req, res) => {
+    try {
+        const breeds = await Breed.find();
+        return res.status(200).json({ status: 200, data: breeds });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: error.message });
+    }
+};
+exports.getBreedById = async (req, res) => {
+    try {
+        const breed = await Breed.findById(req.params.id);
+        if (!breed) {
+            return res.status(404).json({ status: 404, message: 'Breed not found' });
+        }
+        return res.status(200).json({ status: 200, data: breed });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ status: 500, message: error.message });
+    }
+};
+exports.updateBreed = async (req, res) => {
+    try {
+        const breed = await Breed.findById(req.params.id);
+        if (!breed) {
+            return res.status(404).json({ message: 'Breed not found' });
+        }
+        let fileUrl;
+        if (req.file) {
+            fileUrl = req.file.path;
+        }
+        breed.image = fileUrl || breed.image;
+        breed.name = req.body.name || breed.name;
+        breed.description = req.body.description || breed.description;
+        breed.status = req.body.status || breed.status;
+
+        await breed.save();
+
+        return res.status(200).json({ status: 200, data: breed });
+    } catch (error) {
+        return res.status(400).json({ status: 500, message: error.message });
+    }
+};
+exports.deleteBreed = async (req, res) => {
+    try {
+        const breed = await Breed.findById(req.params.id);
+        if (!breed) {
+            return res.status(404).json({ message: 'Breed not found' });
+        }
+        await Breed.findByIdAndDelete(breed._id);
+        return res.status(200).json({ status: 200, message: 'Breed deleted successfully' });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: error.message });
     }
 };
 exports.AddBanner = async (req, res) => {
@@ -1972,23 +2046,6 @@ exports.createService = async (req, res) => {
             }
         }
 
-        let items = [];
-
-        if (req.body.items) {
-            for (let i = 0; i < req.body.items.length; i++) {
-                let findItem = await item.findById(req.body.items[i]);
-
-                if (!findItem) {
-                    return res.status(404).json({ message: `Item Not Found`, status: 404, data: {} });
-                }
-
-                let item1 = {
-                    item: findItem._id,
-                };
-                items.push(item1);
-            }
-        }
-
         const data = {
             mainCategoryId: findMainCategory._id,
             categoryId: findCategory ? findCategory._id : null,
@@ -2006,9 +2063,10 @@ exports.createService = async (req, res) => {
             // thingsToKnow: req.body.thingsToKnow,
             // E4uSuggestion: req.body.E4uSuggestion,
             type: req.body.type,
-            items: items,
-            status: req.body.status
+            status: req.body.status,
+            isAddOnServices: req.body.isAddOnServices
         };
+        console.log("597984", data);
         const category = await service.create(data);
         if (req.body.serviceTypesId) {
             const serviceTypeRef = await ServiceTypeRef.create({
@@ -2038,18 +2096,18 @@ exports.addServiceLocation = async (req, res) => {
 
         const newLocations = req.body.location.map(loc => ({
             city: loc.city,
-            sector: loc.sector,
+            // sector: loc.sector,
         }));
         const existingLocations = existingService.location.map(loc => ({
             city: loc.city,
-            sector: loc.sector,
+            // sector: loc.sector,
         }));
 
-        const duplicateLocation = newLocations.find(newLoc => existingLocations.some(existingLoc => existingLoc.city.toString() === newLoc.city.toString() && existingLoc.sector.toString() === newLoc.sector.toString()));
+        const duplicateLocation = newLocations.find(newLoc => existingLocations.some(existingLoc => existingLoc.city.toString() === newLoc.city.toString()/* && existingLoc.sector.toString() === newLoc.sector.toString()*/));
 
         if (duplicateLocation) {
             return res.status(409).json({
-                message: `Location for city ${duplicateLocation.city} and sector ${duplicateLocation.sector} already exists for this service.`,
+                message: `Location for city ${duplicateLocation.city} /*and sector ${duplicateLocation.sector}*/ already exists for this service.`,
                 status: 409,
                 data: {},
             });
@@ -2057,12 +2115,12 @@ exports.addServiceLocation = async (req, res) => {
 
         for (const loc of req.body.location) {
             const existingCity = await City.findById(loc.city);
-            const existingSector = await Area.findById(loc.sector);
+            // const existingSector = await Area.findById(loc.sector);
 
-            if (!existingCity || !existingSector) {
+            if (!existingCity /*|| !existingSector*/) {
                 return res.status(400).json({
                     status: 400,
-                    message: 'Invalid city or sector ID',
+                    message: 'Invalid city /*or sector*/ ID',
                 });
             }
         }
@@ -2071,7 +2129,7 @@ exports.addServiceLocation = async (req, res) => {
             existingService.location = existingService.location.concat(req.body.location.map(loc => {
                 const newLocation = {
                     city: loc.city,
-                    sector: loc.sector,
+                    // sector: loc.sector,
                     originalPrice: loc.originalPrice,
                     discountActive: loc.discountActive || false,
                     discountPrice: loc.discountPrice || 0,
@@ -2116,19 +2174,19 @@ exports.updateServiceLocation = async (req, res) => {
         const updatedLocation = existingService.location[locationIndex];
 
         const existingCity = await City.findById(req.body.city);
-        const existingSector = await Area.findById(req.body.sector);
+        // const existingSector = await Area.findById(req.body.sector);
 
-        if (!existingCity || !existingSector) {
+        if (!existingCity /*|| !existingSector*/) {
             return res.status(400).json({
                 status: 400,
-                message: 'Invalid city or sector ID',
+                message: 'Invalid city /*or sector*/ ID',
             });
         }
         console.log("449", existingService);
         const isDuplicateLocation = existingService.location.some(loc =>
             loc._id.toString() !== locationId &&
-            loc.city.toString() === req.body.city &&
-            loc.sector.toString() === req.body.sector
+            loc.city.toString() === req.body.city
+            // && loc.sector.toString() === req.body.sector
         );
 
         if (isDuplicateLocation) {
@@ -2141,9 +2199,9 @@ exports.updateServiceLocation = async (req, res) => {
         if (req.body.city) {
             updatedLocation.city = req.body.city;
         }
-        if (req.body.sector) {
-            updatedLocation.sector = req.body.sector;
-        }
+        // if (req.body.sector) {
+        //     updatedLocation.sector = req.body.sector;
+        // }
         if (req.body.originalPrice) {
             updatedLocation.originalPrice = req.body.originalPrice;
         }
@@ -2229,10 +2287,135 @@ exports.getService = async (req, res) => {
         }).populate({
             path: 'location.city',
             model: 'City',
-        }).populate({
+        })/*.populate({
             path: 'location.sector',
             model: 'Area',
+        })*/.populate({
+            path: 'serviceTypes',
+            model: 'ServiceTypeRef',
+            populate: [{
+                //     path: 'service',
+                //     model: 'Service'
+                // }, 
+                // {
+                path: 'serviceType',
+                model: 'ServiceType'
+            }]
+        }).exec();
+        console.log("findServices", findService);
+        let servicesWithCartInfo = [];
+
+        let totalDiscountActive = 0;
+        let totalDiscount = 0;
+        let totalDiscountPrice = 0;
+        let totalQuantityInCart = 0;
+        let totalIsInCart = 0;
+        let totalOriginalPrice = 0;
+
+        if (findService.length > 0 && userCart) {
+            servicesWithCartInfo = findService.map((product) => {
+                const cartItem = userCart.services.find((item) => item.serviceId.equals(product._id));
+
+                let totalDiscountPriceItem = 0;
+                let isInCartItem = 0;
+
+                if (cartItem) {
+                    isInCartItem = 1;
+                    if (product.type === "Package") {
+                        totalDiscountPriceItem = product.discountActive && product.discountPrice ? product.discountPrice * cartItem.quantity : 0;
+                    } else {
+                        totalDiscountPriceItem = product.discountActive && product.discount ? product.discount * cartItem.quantity : 0;
+                    }
+
+                    totalOriginalPrice += (product.originalPrice || 0) * (cartItem.quantity || 0);
+                }
+
+                const countDiscountItem = product.discountActive ? 1 : 0;
+
+                totalDiscountActive += countDiscountItem;
+                totalDiscount += (product.discountActive && product.discount) ? (product.discount * (cartItem?.quantity || 0)) : 0;
+
+                if (product.discountActive && product.discountPrice) {
+                    totalDiscountPrice += product.discountPrice * (cartItem?.quantity || 0);
+                }
+
+                totalQuantityInCart += cartItem ? cartItem.quantity : 0;
+                totalIsInCart += isInCartItem;
+
+                return {
+                    ...product.toObject(),
+                    isInCart: cartItem ? true : false,
+                    quantityInCart: cartItem ? cartItem.quantity : 0,
+                    totalDiscountPrice: totalDiscountPriceItem,
+                    countDiscount: countDiscountItem,
+                };
+            });
+        } else if (findService.length > 0) {
+            servicesWithCartInfo = findService.map((product) => ({
+                ...product.toObject(),
+                isInCart: false,
+                quantityInCart: 0,
+                totalDiscountPrice: product.discountActive && product.type !== "Package" ? (product.discount || 0) : 0,
+                countDiscount: product.discountActive ? 1 : 0,
+                totalOriginalPrice: product.originalPrice || 0,
+            }));
+        }
+
+        if (findService.length > 0) {
+            const response = {
+                message: "Services Found",
+                status: 200,
+                data: servicesWithCartInfo,
+                totalDiscountActive,
+                totalDiscount,
+                totalDiscountPrice,
+                totalQuantityInCart,
+                totalIsInCart,
+                totalOriginalPrice,
+            };
+            return res.status(200).json(response);
+        } else {
+            return res.status(404).json({ message: "Services not found.", status: 404, data: {} });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
+exports.getServiceWithoutSubCategory = async (req, res) => {
+    try {
+        const findMainCategory = await mainCategory.findById({ _id: req.params.mainCategoryId });
+        if (!findMainCategory) {
+            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
+        }
+
+        const findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: req.params.categoryId });
+        if (!findCategory) {
+            return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
+        }
+
+        // const findSubCategory = await subCategory.findOne({
+        //     _id: req.params.subCategoryId, mainCategoryId: findMainCategory._id, categoryId: findCategory._id,
+        // });
+
+        // if (!findSubCategory) {
+        //     return res.status(404).json({ message: "Subcategory Not Found", status: 404, data: {} });
+        // }
+
+        const userCart = await Cart.findOne({ userId: req.user.id });
+
+        const findService = await service.find({
+            mainCategoryId: findMainCategory._id,
+            categoryId: findCategory._id,
+            // subCategoryId: findSubCategory._id,
+            status: true,
         }).populate({
+            path: 'location.city',
+            model: 'City',
+        })/*.populate({
+            path: 'location.sector',
+            model: 'Area',
+        })*/.populate({
             path: 'serviceTypes',
             model: 'ServiceTypeRef',
             populate: [{
@@ -2330,10 +2513,10 @@ exports.getAllService = async (req, res) => {
             .populate({
                 path: 'location.city',
                 model: 'City',
-            }).populate({
+            })/*.populate({
                 path: 'location.sector',
                 model: 'Area',
-            });
+            })*/;
 
         if (findService.length > 0) {
             return res.status(200).json({
@@ -2386,7 +2569,26 @@ exports.removeService = async (req, res) => {
         return res.status(200).json({ message: "Service Deleted Successfully !" });
     }
 };
+exports.updateIsAddOnServices = async (req, res) => {
+    try {
+        const serviceId = req.params.id;
+        const { isAddOnServices } = req.body;
 
+        const checkService = await service.findById(serviceId);
+
+        if (!checkService) {
+            return res.status(404).json({ message: 'Service not found' });
+        }
+
+        checkService.isAddOnServices = isAddOnServices;
+
+        await checkService.save();
+
+        return res.status(200).json({ status: 200, message: 'isAddOnServices updated successfully', data: checkService });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
 exports.createPackage1 = async (req, res) => {
     try {
         const findMainCategory = await mainCategory.findById(req.body.mainCategoryId);

@@ -97,5 +97,6 @@ module.exports = (app) => {
         app.get('/api/v1/user/pets/:id', [authJwt.verifyToken], auth.getPetById);
         app.put('/api/v1/user/pets/:id', [authJwt.verifyToken], petImageUpload.single('image'), auth.updatePet);
         app.delete('/api/v1/user/pets/:id', [authJwt.verifyToken], auth.deletePet);
-
+        app.get('/api/v1/user/breed', [authJwt.verifyToken], auth.getBreeds);
+        app.get('/api/v1/user/breed/:id', [authJwt.verifyToken], auth.getBreedById);
 }

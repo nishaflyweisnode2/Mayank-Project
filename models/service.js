@@ -122,7 +122,7 @@ const serviceSchema = new Schema({
     serviceTypes: { type: Schema.Types.ObjectId, ref: 'ServiceTypeRef' },
     location: [{
         city: { type: mongoose.Schema.ObjectId, ref: 'City' },
-        sector: { type: mongoose.Schema.ObjectId, ref: 'Area' },
+        // sector: { type: mongoose.Schema.ObjectId, ref: 'Area' },
         originalPrice: { type: Number },
         discountActive: { type: Boolean, default: false },
         discount: { type: Number },
@@ -132,11 +132,11 @@ const serviceSchema = new Schema({
     description: { type: String },
     timeInMin: { type: Number },
     totalTime: { type: String },
+    originalPrice: { type: Number },
+    discountActive: { type: Boolean, default: false },
+    discount: { type: Number },
+    discountPrice: { type: Number },
     images: [{ img: { type: String } }],
-    // E4uSafety: { type: Array },
-    // thingsToKnow: { type: Array },
-    // E4uSuggestion: { type: Array },
-    items: [{ item: { type: Schema.Types.ObjectId, ref: 'item' } }],
     rating: { type: Number, default: 0 },
     sellCount: { type: Number, default: 0 },
     useBy: { type: String, enum: ['Male', 'Female', 'Both'] },
@@ -144,7 +144,7 @@ const serviceSchema = new Schema({
     selected: { type: Boolean, default: false },
     type: { type: String, enum: ['Service'] },
     status: { type: Boolean, default: false },
-    isServiceTypes: { type: Boolean, default: false },
+    isAddOnServices: { type: Boolean, default: false },
 }, { timestamps: true });
 
 serviceSchema.plugin(mongoosePaginate);

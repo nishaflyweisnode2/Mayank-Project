@@ -4,7 +4,7 @@ var multer = require("multer");
 const path = require("path");
 const express = require("express");
 const router = express()
-const { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, BrandUpload, E4UUpload, offerUpload, charges, serviceType, subCategory, mainCategoryBannerUpload, testimonial } = require('../middlewares/imageUpload')
+const { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, BrandUpload, BreedUpload, E4UUpload, offerUpload, charges, serviceType, subCategory, mainCategoryBannerUpload, testimonial } = require('../middlewares/imageUpload')
 module.exports = (app) => {
         app.post("/api/v1/admin/registration", auth.registration);
         app.post("/api/v1/admin/login", auth.signin);
@@ -24,6 +24,11 @@ module.exports = (app) => {
         app.get("/api/v1/admin/Brand/allBrand", auth.getBrands);
         app.put("/api/v1/admin/Brand/updateBrand/:id", [authJwt.verifyToken], BrandUpload.single('image'), auth.updateBrand);
         app.delete("/api/v1/admin/Brand/deleteBrand/:id", [authJwt.verifyToken], auth.removeBrand);
+        app.post('/api/v1/admin/breed', [authJwt.verifyToken], BreedUpload.single('image'), auth.createBreed);
+        app.get('/api/v1/admin/breed', [authJwt.verifyToken], auth.getBreeds);
+        app.get('/api/v1/admin/breed/:id', [authJwt.verifyToken], auth.getBreedById);
+        app.put('/api/v1/admin/breed/:id', [authJwt.verifyToken], BreedUpload.single('image'), auth.updateBreed);
+        app.delete('/api/v1/admin/breed/:id', [authJwt.verifyToken], auth.deleteBreed);
         // app.post("/api/v1/admin/Charges/addCharges", [authJwt.verifyToken], auth.createCharge);
         app.post("/api/v1/admin/Charges/addCharges", [authJwt.verifyToken], charges.single('image'), auth.createCharge);
         app.get("/api/v1/admin/Charges/allCharges", auth.getCharges);
@@ -83,9 +88,11 @@ module.exports = (app) => {
         app.put('/api/v1/admin/services/:serviceId/add-location', [authJwt.verifyToken], auth.addServiceLocation)
         app.put('/api/v1/admin/services/:serviceId/update-location/:locationId', [authJwt.verifyToken], auth.updateServiceLocation)
         app.get("/api/v1/admin/Service/:mainCategoryId/:categoryId/:subCategoryId", [authJwt.verifyToken], auth.getService);
+        app.get("/api/v1/admin/Service-without-sub/:mainCategoryId/:categoryId", [authJwt.verifyToken], auth.getServiceWithoutSubCategory);
         app.get("/api/v1/admin/Service/getAllService", [authJwt.verifyToken], auth.getAllService);
         app.get('/api/v1/admin/service/:id', [authJwt.verifyToken], auth.getServiceById);
         app.delete("/api/v1/admin/Service/delete/:id", [authJwt.verifyToken], auth.removeService);
+        app.put('/api/v1/admin/services/:id/isAddOnServices', [authJwt.verifyToken], auth.updateIsAddOnServices);
         app.post("/api/v1/admin/Service/addPackages", [authJwt.verifyToken], serviceUpload.array('image'), auth.createPackage);
         app.put('/api/v1/admin/package/:packageId/add-location', [authJwt.verifyToken], auth.addPackageLocation)
         app.put('/api/v1/admin/package/:packageId/update-location/:locationId', [authJwt.verifyToken], auth.updatePackageLocation)

@@ -33,6 +33,7 @@ const { charges } = require("../middlewares/imageUpload");
 const Slot = require('../models/SlotModel');
 const moment = require('moment');
 const Pet = require('../models/petModel');
+const Breed = require('../models/breedModel');
 
 
 
@@ -408,6 +409,13 @@ exports.createPet = async (req, res) => {
                         return res.status(404).send({ status: 404, message: "User not found" });
                 }
 
+                if (breed) {
+                        const checkBreed = await Breed.findById(breed);
+                        if (!checkBreed) {
+                                return res.status(404).json({ status: 404, message: 'Breed not found' });
+                        }
+                }
+
                 let image;
                 if (req.file) {
                         image = req.file.path
@@ -428,7 +436,6 @@ exports.createPet = async (req, res) => {
                 return res.status(500).json({ status: 500, message: 'Server Error' });
         }
 };
-
 exports.getPets = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -438,7 +445,7 @@ exports.getPets = async (req, res) => {
                         return res.status(404).send({ status: 404, message: "User not found" });
                 }
 
-                const pets = await Pet.find({ user: userId });
+                const pets = await Pet.find({ user: userId }).populate(['user', 'breed']);
 
                 return res.status(200).json({ status: 200, data: pets });
         } catch (error) {
@@ -446,7 +453,6 @@ exports.getPets = async (req, res) => {
                 return res.status(500).json({ status: 500, message: 'Server Error' });
         }
 };
-
 exports.getPetById = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -456,7 +462,7 @@ exports.getPetById = async (req, res) => {
                         return res.status(404).send({ status: 404, message: "User not found" });
                 }
 
-                const pet = await Pet.findById(req.params.id);
+                const pet = await Pet.findById(req.params.id).populate(['user', 'breed']);
                 if (!pet) {
                         return res.status(404).json({ status: 404, message: 'Pet not found' });
                 }
@@ -466,7 +472,6 @@ exports.getPetById = async (req, res) => {
                 return res.status(500).json({ status: 500, message: 'Server Error' });
         }
 };
-
 exports.updatePet = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -479,6 +484,13 @@ exports.updatePet = async (req, res) => {
                 let imageData;
                 if (req.file) {
                         imageData = req.file.path;
+                }
+
+                if (req.body.breed) {
+                        const checkBreed = await Breed.findById(req.body.breed);
+                        if (!checkBreed) {
+                                return res.status(404).json({ status: 404, message: 'Breed not found' });
+                        }
                 }
 
                 const pet = await Pet.findByIdAndUpdate(req.params.id, { ...req.body, image: imageData }, {
@@ -496,7 +508,6 @@ exports.updatePet = async (req, res) => {
                 return res.status(500).json({ status: 500, message: 'Server Error' });
         }
 };
-
 exports.deletePet = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -5521,4 +5532,23 @@ function calculateServices2Total(services) {
         return total;
 }
 
-
+exports.getBreeds = async (req, res) => {
+        try {
+                const breeds = await Breed.find();
+                return res.status(200).json({ status: 200, data: breeds });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.getBreedById = async (req, res) => {
+        try {
+                const breed = await Breed.findById(req.params.id);
+                if (!breed) {
+                        return res.status(404).json({ status: 404, message: 'Breed not found' });
+                }
+                return res.status(200).json({ status: 200, data: breed });
+        } catch (error) {
+                console.log(error);
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
