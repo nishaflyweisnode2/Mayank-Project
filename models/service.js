@@ -118,8 +118,6 @@ const serviceSchema = new Schema({
     mainCategoryId: { type: Schema.Types.ObjectId, ref: 'mainCategory' },
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category' },
     subCategoryId: [{ type: Schema.Types.ObjectId, ref: 'subCategory' }],
-    servicePackageId: { type: Schema.Types.ObjectId, ref: 'servicePackage' },
-    serviceTypes: { type: Schema.Types.ObjectId, ref: 'ServiceTypeRef' },
     location: [{
         city: { type: mongoose.Schema.ObjectId, ref: 'City' },
         // sector: { type: mongoose.Schema.ObjectId, ref: 'Area' },

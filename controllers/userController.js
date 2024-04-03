@@ -16,7 +16,6 @@ const offer = require('../models/offer');
 const ticket = require('../models/ticket');
 const Rating = require('../models/ratingModel');
 const favouriteBooking = require('../models/favouriteBooking');
-const servicePackage = require('../models/servicePackage');
 const Package = require('../models/packageModel');
 const Testimonial = require("../models/testimonial");
 const Order = require('../models/orderModel')

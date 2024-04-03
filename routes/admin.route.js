@@ -97,6 +97,7 @@ module.exports = (app) => {
         app.put('/api/v1/admin/package/:packageId/add-location', [authJwt.verifyToken], auth.addPackageLocation)
         app.put('/api/v1/admin/package/:packageId/update-location/:locationId', [authJwt.verifyToken], auth.updatePackageLocation)
         app.get("/api/v1/admin/Package/:mainCategoryId/:categoryId/:subCategoryId", [authJwt.verifyToken], auth.getPackage);
+        app.get("/api/v1/admin/Package-without-sub/:mainCategoryId/:categoryId", [authJwt.verifyToken], auth.getPackageithoutSubCategory);
         app.get("/api/v1/admin/Package/getAllService", [authJwt.verifyToken], auth.getAllPackage);
         app.get('/api/v1/admin/Package/:id', [authJwt.verifyToken], auth.getPackageById);
         app.delete("/api/v1/admin/Package/delete/:id", [authJwt.verifyToken], auth.removePackage);
@@ -140,11 +141,6 @@ module.exports = (app) => {
         app.get('/api/v1/admin/consent-forms', [authJwt.verifyToken], auth.getAllConsentForms);
         app.get('/api/v1/admin/consent-forms/:id', [authJwt.verifyToken], auth.getConsentFormById);
         app.put('/api/v1/admin/update-minimum-cart-amount', [authJwt.verifyToken], auth.updateMinimumCartAmount);
-        app.post("/api/v1/admin/serviceTypes", [authJwt.verifyToken], serviceType.single('image'), auth.createServiceType);
-        app.get("/api/v1/admin/serviceTypes", [authJwt.verifyToken], auth.getAllServiceTypes);
-        app.get("/api/v1/admin/serviceTypes/:serviceTypeId", [authJwt.verifyToken], auth.getServiceTypeById);
-        app.put("/api/v1/admin/serviceTypes/:serviceTypeId", [authJwt.verifyToken], serviceType.single('image'), auth.updateServiceType);
-        app.delete("/api/v1/admin/serviceTypes/:serviceTypeId", [authJwt.verifyToken], auth.deleteServiceType);
         app.post("/api/v1/admin/city/cities", [authJwt.verifyToken], auth.createCity);
         app.get("/api/v1/admin/city/cities", [authJwt.verifyToken], auth.getAllCities);
         app.get("/api/v1/admin/city/cities/:id", [authJwt.verifyToken], auth.getCityById);

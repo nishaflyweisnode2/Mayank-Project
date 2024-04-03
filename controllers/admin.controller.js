@@ -12,7 +12,6 @@ const banner = require('../models/banner/banner')
 const ContactDetail = require("../models/ContactDetail");
 // const subscription = require('../models/subscription');
 const service = require('../models/service');
-const servicePackage = require('../models/servicePackage');
 const Package = require('../models/packageModel');
 // const facialType = require('../models/facialType');
 const Charges = require('../models/Charges');
@@ -36,8 +35,6 @@ const ConsentForm = require('../models/consentFormModel');
 const offer = require('../models/offer');
 const Cart = require('../models/cartModel');
 const MinimumCart = require('../models/miniumCartAmountModel');
-const ServiceType = require("../models/category/serviceType");
-const ServiceTypeRef = require("../models/servicetypeRef");
 const City = require('../models/cityModel');
 const Area = require('../models/areaModel');
 const MainCategoryBanner = require('../models/banner/mainCategoryBanner');
@@ -2412,20 +2409,9 @@ exports.getServiceWithoutSubCategory = async (req, res) => {
         }).populate({
             path: 'location.city',
             model: 'City',
-        })/*.populate({
-            path: 'location.sector',
-            model: 'Area',
-        })*/.populate({
-            path: 'serviceTypes',
-            model: 'ServiceTypeRef',
-            populate: [{
-                //     path: 'service',
-                //     model: 'Service'
-                // }, 
-                // {
-                path: 'serviceType',
-                model: 'ServiceType'
-            }]
+        }).populate({
+            path: 'services.service',
+            model: 'Service',
         }).exec();
         console.log("findServices", findService);
         let servicesWithCartInfo = [];
@@ -2761,7 +2747,7 @@ exports.createPackage1 = async (req, res) => {
 
 exports.createPackage = async (req, res) => {
     try {
-        let { mainCategoryId, categoryId, subCategoryId, title, description, originalPrice, discountActive, discountPrice, timeInMin, E4uSafety, thingsToKnow, E4uSuggestion, packageType, selectedCount, services, addOnServices, items, serviceTypesId, status } = req.body;
+        let { mainCategoryId, categoryId, subCategoryId, title, packageType, description, originalPrice, discountActive, discountPrice, timeInMin, selectedCount, services, addOnServices, validUpTo, status } = req.body;
 
         const findMainCategory = await mainCategory.findById(mainCategoryId);
         if (!findMainCategory) {
@@ -2883,17 +2869,14 @@ exports.createPackage = async (req, res) => {
             totalTime,
             timeInMin: totalServiceTime || timeInMin,
             images,
-            // E4uSafety,
-            // thingsToKnow,
-            // E4uSuggestion,
             type: "Package",
             packageType,
-            selected: packageType !== "Normal",
-            selectedCount: packageType === "Customize" ? selectedCount || 0 : 0,
+            selected: packageType ? true : false,
+            selectedCount: packageType === "Basic" || "Elite" ? selectedCount || 0 : 0,
             services: [],
             addOnServices: [],
-            items: [],
             status,
+            validUpTo,
         };
         console.log("packageData", packageData);
 
@@ -2917,46 +2900,7 @@ exports.createPackage = async (req, res) => {
             }
         }
 
-        if (items && Array.isArray(items)) {
-            for (const itemId of items) {
-                const findItem = await item.findById(itemId);
-                if (!findItem) {
-                    return res.status(404).json({ message: `Item Not Found`, status: 404, data: {} });
-                }
-                packageData.items.push({ item: findItem._id });
-            }
-        }
-
         const category = await Package.create(packageData);
-
-        if (serviceTypesId) {
-            const serviceTypeRef = await ServiceTypeRef.create({
-                service: category._id,
-                serviceType: serviceTypesId,
-            });
-
-            category.serviceTypes = serviceTypeRef._id;
-            await category.save();
-        }
-
-        if (packageType === "Customize" && selectedCount > 0) {
-            const servicePackages = [];
-            for (let i = 0; i < selectedCount; i++) {
-                const obj1 = {
-                    serviceId: category._id,
-                    categoryId: findCategory ? findCategory._id : null,
-                    services: packageData.services,
-                };
-                const savePackage = await servicePackage.create(obj1);
-                if (savePackage) {
-                    await Package.findByIdAndUpdate({ _id: category._id }, { $push: { servicePackageId: savePackage._id } }, { new: true });
-                }
-                servicePackages.push(savePackage);
-            }
-
-            category.servicePackages = servicePackages;
-            await category.save();
-        }
 
         return res.status(200).json({ message: "Package added successfully.", status: 200, data: category });
     } catch (error) {
@@ -2976,7 +2920,7 @@ exports.addPackageLocation = async (req, res) => {
 
         const newLocations = req.body.location.map(loc => ({
             city: loc.city,
-            sector: loc.sector,
+            // sector: loc.sector,
             originalPrice: loc.originalPrice,
             discountActive: loc.discountActive,
             discountPrice: loc.discountPrice,
@@ -2984,17 +2928,17 @@ exports.addPackageLocation = async (req, res) => {
 
         const existingLocations = existingPackage.location.map(loc => ({
             city: loc.city,
-            sector: loc.sector,
+            // sector: loc.sector,
         }));
 
         const duplicateLocation = newLocations.find(newLoc => existingLocations.some(existingLoc =>
-            existingLoc.city.toString() === newLoc.city.toString() &&
-            existingLoc.sector.toString() === newLoc.sector.toString()
+            existingLoc.city.toString() === newLoc.city.toString()
+            //  &&existingLoc.sector.toString() === newLoc.sector.toString()
         ));
 
         if (duplicateLocation) {
             return res.status(409).json({
-                message: `Location for city ${duplicateLocation.city} and sector ${duplicateLocation.sector} already exists for this packages.`,
+                message: `Location for city ${duplicateLocation.city} /*and sector ${duplicateLocation.sector}*/ already exists for this packages.`,
                 status: 409,
                 data: {},
             });
@@ -3002,30 +2946,30 @@ exports.addPackageLocation = async (req, res) => {
 
         for (const loc of req.body.location) {
             const existingCity = await City.findById(loc.city);
-            const existingSector = await Area.findById(loc.sector);
+            // const existingSector = await Area.findById(loc.sector);
 
-            if (!existingCity || !existingSector) {
+            if (!existingCity /*|| !existingSector*/) {
                 return res.status(400).json({
                     status: 400,
-                    message: 'Invalid city or sector ID',
+                    message: 'Invalid city /*or sector*/ ID',
                 });
             }
         }
 
         if (req.body.location && Array.isArray(req.body.location)) {
             const newLocations = req.body.location.map(async loc => {
-                const { city, sector, originalPrice, discountActive, discountPrice } = loc;
+                const { city, /*sector,*/ originalPrice, discountActive, discountPrice } = loc;
 
                 const matchingServices = existingPackage.services.filter(service =>
                     service.service.location.some(location =>
-                        location.city.toString() === city.toString() &&
-                        location.sector.toString() === sector.toString()
+                        location.city.toString() === city.toString()
+                        //  && location.sector.toString() === sector.toString()
                     )
                 );
 
                 const aggregatedLocation = {
                     city: city,
-                    sector: sector,
+                    // sector: sector,
                     originalPrice: originalPrice || 0,
                     discountActive: discountActive || false,
                     discountPrice: discountPrice || 0,
@@ -3035,8 +2979,8 @@ exports.addPackageLocation = async (req, res) => {
                 if (!originalPrice || !discountActive || !discountPrice) {
                     for (const service of matchingServices) {
                         const locationMatch = service.service.location.find(location =>
-                            location.city.toString() === city.toString() &&
-                            location.sector.toString() === sector.toString()
+                            location.city.toString() === city.toString()
+                            //  && location.sector.toString() === sector.toString()
                         );
 
                         if (locationMatch) {
@@ -3087,34 +3031,34 @@ exports.updatePackageLocation = async (req, res) => {
         const updatedLocation = existingPackage.location[locationIndex];
 
         const existingCity = await City.findById(req.body.city);
-        const existingSector = await Area.findById(req.body.sector);
+        // const existingSector = await Area.findById(req.body.sector);
 
-        if (!existingCity || !existingSector) {
+        if (!existingCity /*|| !existingSector*/) {
             return res.status(400).json({
                 status: 400,
-                message: 'Invalid city or sector ID',
+                message: 'Invalid city /*or sector ID*/',
             });
         }
 
         const isDuplicateLocation = existingPackage.location.some(loc =>
             loc._id.toString() !== locationId &&
-            loc.city.toString() === req.body.city &&
-            loc.sector.toString() === req.body.sector
+            loc.city.toString() === req.body.city
+            //  &&loc.sector.toString() === req.body.sector
         );
 
         if (isDuplicateLocation) {
             return res.status(400).json({
                 status: 400,
-                message: 'Location with the same city and sector already exists for this package.',
+                message: 'Location with the same city /*and sector*/ already exists for this package.',
             });
         }
 
         if (req.body.city) {
             updatedLocation.city = req.body.city;
         }
-        if (req.body.sector) {
-            updatedLocation.sector = req.body.sector;
-        }
+        // if (req.body.sector) {
+        //     updatedLocation.sector = req.body.sector;
+        // }
 
         if (!req.body.originalPrice || !req.body.discountActive || !req.body.discountPrice) {
             const serviceId = req.body.service;
@@ -3123,8 +3067,8 @@ exports.updatePackageLocation = async (req, res) => {
 
             if (associatedService && associatedService.service && associatedService.service.location) {
                 const locationData = associatedService.service.location.find(location =>
-                    location.city.toString() === updatedLocation.city.toString() &&
-                    location.sector.toString() === updatedLocation.sector.toString()
+                    location.city.toString() === updatedLocation.city.toString()
+                    //  &&.sector.toString() === updatedLocation.sector.toString()
                 );
 
                 if (locationData) {
@@ -3193,9 +3137,6 @@ exports.getPackage = async (req, res) => {
         }).populate({
             path: 'location.city',
             model: 'City',
-        }).populate({
-            path: 'location.sector',
-            model: 'Area',
         }).populate('services.service',).populate('addOnServices.service');;
 
         let servicesWithCartInfo = [];
@@ -3276,15 +3217,123 @@ exports.getPackage = async (req, res) => {
         return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
     }
 };
+exports.getPackageithoutSubCategory = async (req, res) => {
+    try {
+        const findMainCategory = await mainCategory.findById({ _id: req.params.mainCategoryId });
+        if (!findMainCategory) {
+            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
+        }
+
+        const findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: req.params.categoryId });
+        if (!findCategory) {
+            return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
+        }
+
+        // const findSubCategory = await subCategory.findOne({
+        //     _id: req.params.subCategoryId, mainCategoryId: findMainCategory._id, categoryId: findCategory._id,
+        // });
+
+        // if (!findSubCategory) {
+        //     return res.status(404).json({ message: "Subcategory Not Found", status: 404, data: {} });
+        // }
+
+        const userCart = await Cart.findOne({ userId: req.user.id });
+
+        const findService = await Package.find({
+            mainCategoryId: findMainCategory._id,
+            categoryId: findCategory._id,
+            // subCategoryId: findSubCategory._id,
+            // status: true,
+        }).populate({
+            path: 'location.city',
+            model: 'City',
+        }).exec();
+        console.log("findServices", findService);
+        let servicesWithCartInfo = [];
+
+        let totalDiscountActive = 0;
+        let totalDiscount = 0;
+        let totalDiscountPrice = 0;
+        let totalQuantityInCart = 0;
+        let totalIsInCart = 0;
+        let totalOriginalPrice = 0;
+
+        if (findService.length > 0 && userCart) {
+            servicesWithCartInfo = findService.map((product) => {
+                const cartItem = userCart.services.find((item) => item.serviceId.equals(product._id));
+
+                let totalDiscountPriceItem = 0;
+                let isInCartItem = 0;
+
+                if (cartItem) {
+                    isInCartItem = 1;
+                    if (product.type === "Package") {
+                        totalDiscountPriceItem = product.discountActive && product.discountPrice ? product.discountPrice * cartItem.quantity : 0;
+                    } else {
+                        totalDiscountPriceItem = product.discountActive && product.discount ? product.discount * cartItem.quantity : 0;
+                    }
+
+                    totalOriginalPrice += (product.originalPrice || 0) * (cartItem.quantity || 0);
+                }
+
+                const countDiscountItem = product.discountActive ? 1 : 0;
+
+                totalDiscountActive += countDiscountItem;
+                totalDiscount += (product.discountActive && product.discount) ? (product.discount * (cartItem?.quantity || 0)) : 0;
+
+                if (product.discountActive && product.discountPrice) {
+                    totalDiscountPrice += product.discountPrice * (cartItem?.quantity || 0);
+                }
+
+                totalQuantityInCart += cartItem ? cartItem.quantity : 0;
+                totalIsInCart += isInCartItem;
+
+                return {
+                    ...product.toObject(),
+                    isInCart: cartItem ? true : false,
+                    quantityInCart: cartItem ? cartItem.quantity : 0,
+                    totalDiscountPrice: totalDiscountPriceItem,
+                    countDiscount: countDiscountItem,
+                };
+            });
+        } else if (findService.length > 0) {
+            servicesWithCartInfo = findService.map((product) => ({
+                ...product.toObject(),
+                isInCart: false,
+                quantityInCart: 0,
+                totalDiscountPrice: product.discountActive && product.type !== "Service" ? (product.discount || 0) : 0,
+                countDiscount: product.discountActive ? 1 : 0,
+                totalOriginalPrice: product.originalPrice || 0,
+            }));
+        }
+
+        if (findService.length > 0) {
+            const response = {
+                message: "Services Found",
+                status: 200,
+                data: servicesWithCartInfo,
+                totalDiscountActive,
+                totalDiscount,
+                totalDiscountPrice,
+                totalQuantityInCart,
+                totalIsInCart,
+                totalOriginalPrice,
+            };
+            return res.status(200).json(response);
+        } else {
+            return res.status(404).json({ message: "Package not found.", status: 404, data: {} });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
 exports.getAllPackage = async (req, res) => {
     try {
         const findService = await Package.find().populate('mainCategoryId', 'name').populate('categoryId', 'name').populate('subCategoryId', 'name')
             .populate({
                 path: 'location.city',
                 model: 'City',
-            }).populate({
-                path: 'location.sector',
-                model: 'Area',
             }).populate('services.service',).populate('addOnServices.service');
 
         if (findService.length > 0) {
@@ -3309,9 +3358,6 @@ exports.getPackageById = async (req, res) => {
             .populate({
                 path: 'location.city',
                 model: 'City',
-            }).populate({
-                path: 'location.sector',
-                model: 'Area',
             }).populate('services.service',).populate('addOnServices.service');;
 
 
@@ -4032,188 +4078,6 @@ exports.updateMinimumCartAmount = async (req, res) => {
             status: 500,
             message: "Internal server error",
             data: {}
-        });
-    }
-};
-
-
-exports.createServiceType = async (req, res) => {
-    try {
-        const { mainCategoryId, name, status } = req.body;
-        let fileUrl;
-        if (req.file) {
-            fileUrl = req.file ? req.file.path : "";
-        }
-
-        const checkMainCategory = await mainCategory.findById(mainCategoryId);
-        if (!checkMainCategory) {
-            return res.status(404).json({
-                status: 404,
-                message: "Main Category not found",
-                data: {},
-            });
-        }
-
-        const serviceType = new ServiceType({ mainCategoryId, name, status, image: fileUrl });
-        const result = await serviceType.save();
-
-        if (!result) {
-            return res.status(500).json({
-                status: 500,
-                message: "Failed to create a new ServiceType",
-                data: {},
-            });
-        }
-
-        return res.status(201).json({
-            status: 201,
-            message: "ServiceType created successfully",
-            data: result,
-        });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            status: 500,
-            message: "Internal server error",
-            data: {},
-        });
-    }
-};
-
-exports.getAllServiceTypes = async (req, res) => {
-    try {
-        const serviceTypes = await ServiceType.find();
-
-        return res.status(200).json({
-            status: 200,
-            message: "ServiceTypes retrieved successfully",
-            data: serviceTypes,
-        });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            status: 500,
-            message: "Internal server error",
-            data: {},
-        });
-    }
-};
-
-exports.getServiceTypeById = async (req, res) => {
-    const { serviceTypeId } = req.params;
-
-    try {
-        const serviceType = await ServiceType.findById(serviceTypeId);
-
-        if (!serviceType) {
-            return res.status(404).json({
-                status: 404,
-                message: "ServiceType not found",
-                data: {},
-            });
-        }
-
-        return res.status(200).json({
-            status: 200,
-            message: "ServiceType retrieved successfully",
-            data: serviceType,
-        });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            status: 500,
-            message: "Internal server error",
-            data: {},
-        });
-    }
-};
-
-exports.updateServiceType = async (req, res) => {
-    const { serviceTypeId } = req.params;
-
-    const findServiceType = await ServiceType.findById(serviceTypeId);
-    if (!findServiceType) {
-        return res.status(404).json({
-            status: 404,
-            message: "ServiceType not found",
-            data: {},
-        });
-    }
-
-    let fileUrl;
-    if (req.file) {
-        fileUrl = req.file ? req.file.path : "";
-    }
-
-    const { name, status, mainCategoryId } = req.body;
-
-    const findMainCategory = await mainCategory.findById(mainCategoryId);
-    if (!findMainCategory) {
-        return res.status(404).json({
-            status: 404,
-            message: "Main Category Not Found",
-            data: {},
-        });
-    }
-
-    let obj = {
-        mainCategoryId: findMainCategory._id,
-        name: name || findServiceType.name,
-        image: fileUrl || findServiceType.image,
-        status: status || findServiceType.status,
-    };
-
-    try {
-        const result = await ServiceType.findByIdAndUpdate(
-            { _id: serviceTypeId },
-            { $set: obj },
-            { new: true }
-        );
-
-        if (!result) {
-            return res.status(404).json({
-                status: 404,
-                message: "ServiceType not found",
-                data: {},
-            });
-        }
-
-        return res.status(200).json({
-            status: 200,
-            message: "ServiceType updated successfully",
-            data: result,
-        });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            status: 500,
-            message: "Internal server error",
-            data: {},
-        });
-    }
-};
-
-exports.deleteServiceType = async (req, res) => {
-    const { serviceTypeId } = req.params;
-
-    try {
-        const result = await ServiceType.findByIdAndRemove(serviceTypeId);
-
-        if (!result) {
-            return res.status(404).json({
-                status: 404,
-                message: "ServiceType not found",
-                data: {},
-            });
-        }
-
-        return res.status(204).send();
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            status: 500,
-            message: "Internal server error",
-            data: {},
         });
     }
 };
