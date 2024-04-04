@@ -202,6 +202,13 @@ const CartSchema = new Schema({
         totalItem: {
                 type: Number,
         },
+        breed: {
+                type: Schema.Types.ObjectId,
+                ref: 'Breed',
+        },
+        age: {
+                type: Number,
+        },
 }, { timestamps: true });
 
 module.exports = mongoose.model('cart', CartSchema);

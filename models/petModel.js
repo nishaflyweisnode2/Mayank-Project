@@ -9,6 +9,10 @@ const petSchema = new mongoose.Schema({
     petName: {
         type: String,
     },
+    mainCategory: {
+        type: schema.Types.ObjectId,
+        ref: "mainCategory"
+    },
     breed: {
         type: schema.Types.ObjectId,
         ref: "Breed",

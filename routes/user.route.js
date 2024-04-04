@@ -27,9 +27,8 @@ module.exports = (app) => {
         app.put('/api/v1/user/replyOnTicket/:id', [authJwt.verifyToken], auth.replyOnTicket);
         // app.post("/api/v1/user/Cart/addToCart", [authJwt.verifyToken], auth.addToCart);
         app.post("/api/v1/user/Cart/addToCartSingleService", [authJwt.verifyToken], auth.addToCartSingleService);
-        app.post("/api/v1/user/Cart/addToCartPackageNormal", [authJwt.verifyToken], auth.addToCartPackageNormal);
-        app.post("/api/v1/user/Cart/addToCartPackageCustomise", [authJwt.verifyToken], auth.addToCartPackageCustomise);
-        app.post("/api/v1/user/Cart/addToCartPackageEdit", [authJwt.verifyToken], auth.addToCartPackageEdit);
+        app.post("/api/v1/user/Cart/addToCartPackageBasic", [authJwt.verifyToken], auth.addToCartPackageBasic);
+        app.post("/api/v1/user/Cart/addToCartPackageElite", [authJwt.verifyToken], auth.addToCartPackageElite);
         app.post('/api/v1/user/Cart/remove-from-cart', [authJwt.verifyToken], auth.removeFromCart);
         app.post('/api/v1/user/Cart/remove-package-from-cart', [authJwt.verifyToken], auth.removePackageFromCart);
         //
@@ -99,4 +98,5 @@ module.exports = (app) => {
         app.delete('/api/v1/user/pets/:id', [authJwt.verifyToken], auth.deletePet);
         app.get('/api/v1/user/breed', [authJwt.verifyToken], auth.getBreeds);
         app.get('/api/v1/user/breed/:id', [authJwt.verifyToken], auth.getBreedById);
+        app.get('/api/v1/user/breed/mainCategory/:id', [authJwt.verifyToken], auth.getBreedByMainCategoryId);
 }

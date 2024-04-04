@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
+const schema = mongoose.Schema;
+
 
 const breedSchema = new mongoose.Schema({
+    mainCategory: {
+        type: schema.Types.ObjectId,
+        ref: "mainCategory"
+    },
     name: {
         type: String,
     },

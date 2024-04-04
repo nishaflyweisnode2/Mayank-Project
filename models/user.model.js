@@ -124,13 +124,6 @@ var userSchema = new schema(
                 default: [0, 0]
             },
         },
-        subscriptionStatus: {
-            type: Boolean,
-            default: false,
-        },
-        subscriptionExpire: {
-            type: Date,
-        },
         workcity: {
             type: String
         },

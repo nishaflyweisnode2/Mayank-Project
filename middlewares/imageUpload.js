@@ -21,8 +21,6 @@ const storage6 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folde
 const serviceUpload = multer({ storage: storage6 });
 const storage7 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/userProfile", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
 const userProfileUpload = multer({ storage: storage7 });
-const storage8 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/Brand", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
-const BrandUpload = multer({ storage: storage8 });
 const storage9 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/E4u", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
 const E4UUpload = multer({ storage: storage9 });
 const storage10 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/offer", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
@@ -36,15 +34,6 @@ const storage11 = new CloudinaryStorage({
 });
 
 const spAgreementUpload = multer({ storage: storage11 });
-
-const storage12 = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'mayank-project/images/transportCharges',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'xlsx', 'xls', 'pdf', 'PDF']
-    }
-});
-const transportationCharges = multer({ storage: storage12 });
 
 const storage13 = new CloudinaryStorage({
     cloudinary: cloudinary,
@@ -104,4 +93,4 @@ const petImageUpload = multer({ storage: storage19 });
 const storage20 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/Breed", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
 const BreedUpload = multer({ storage: storage20 });
 
-module.exports = { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, E4UUpload, userProfileUpload, BrandUpload, offerUpload, spAgreementUpload, transportationCharges, complaintSuggestion, testimonial, charges, serviceType, subCategory, mainCategoryBannerUpload, petImageUpload, BreedUpload };
+module.exports = { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, E4UUpload, userProfileUpload, offerUpload, spAgreementUpload, complaintSuggestion, testimonial, charges, serviceType, subCategory, mainCategoryBannerUpload, petImageUpload, BreedUpload };

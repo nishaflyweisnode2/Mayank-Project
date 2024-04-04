@@ -4,7 +4,7 @@ var multer = require("multer");
 const path = require("path");
 const express = require("express");
 const router = express()
-const { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, BrandUpload, BreedUpload, E4UUpload, offerUpload, charges, serviceType, subCategory, mainCategoryBannerUpload, testimonial } = require('../middlewares/imageUpload')
+const { bannerUpload, subCategoryUpload, categoryUpload, serviceUpload, BreedUpload, E4UUpload, offerUpload, charges, subCategory, mainCategoryBannerUpload, testimonial } = require('../middlewares/imageUpload')
 module.exports = (app) => {
         app.post("/api/v1/admin/registration", auth.registration);
         app.post("/api/v1/admin/login", auth.signin);
@@ -20,10 +20,6 @@ module.exports = (app) => {
         app.put('/api/v1/admin/banners/:id/update-position', auth.updateBannerPosition);
         app.get("/api/v1/admin/Banner/getBannerById/:id", auth.getBannerById);
         app.delete("/api/v1/admin/Banner/deleteBanner/:id", [authJwt.verifyToken], auth.DeleteBanner);
-        app.post("/api/v1/admin/Brand/addBrand", [authJwt.verifyToken], BrandUpload.single('image'), auth.createBrands);
-        app.get("/api/v1/admin/Brand/allBrand", auth.getBrands);
-        app.put("/api/v1/admin/Brand/updateBrand/:id", [authJwt.verifyToken], BrandUpload.single('image'), auth.updateBrand);
-        app.delete("/api/v1/admin/Brand/deleteBrand/:id", [authJwt.verifyToken], auth.removeBrand);
         app.post('/api/v1/admin/breed', [authJwt.verifyToken], BreedUpload.single('image'), auth.createBreed);
         app.get('/api/v1/admin/breed', [authJwt.verifyToken], auth.getBreeds);
         app.get('/api/v1/admin/breed/:id', [authJwt.verifyToken], auth.getBreedById);
@@ -77,7 +73,6 @@ module.exports = (app) => {
         app.put("/api/v1/admin/SubCategory/update/:id", [authJwt.verifyToken], subCategory.single('image'), auth.updateSubCategory);
         app.delete("/api/v1/admin/SubCategory/delete/:id", [authJwt.verifyToken], auth.removeSubCategory);
         app.post("/api/v1/admin/ItemSubCategory/createCategory", [authJwt.verifyToken], auth.createItemSubCategory);
-        app.get("/api/v1/admin/ItemSubCategory/:categoryId", auth.getItemSubCategories);
         app.put("/api/v1/admin/ItemSubCategory/update/:id", [authJwt.verifyToken], auth.updateItemSubCategory);
         app.delete("/api/v1/admin/ItemSubCategory/delete/:id", [authJwt.verifyToken], auth.removeItemSubCategory);
         app.post("/api/v1/admin/Item/createItem", [authJwt.verifyToken], auth.createItem);
@@ -113,17 +108,12 @@ module.exports = (app) => {
         app.delete("/api/v1/admin/FreeService/deleteFreeService/:id", [authJwt.verifyToken], auth.removeFreeServices);
         app.get('/api/v1/admin/getOrders', [authJwt.verifyToken], auth.getOrders);
         app.put('/api/v1/admin/assignOrder/:userId/:orderId', [authJwt.verifyToken], auth.assignOrder);
-        app.post('/api/v1/admin/assignItems', [authJwt.verifyToken], auth.assignItems);
-        app.get('/api/v1/admin/assignItemslist', [authJwt.verifyToken], auth.assignItemslist);
 
 
 
 
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        app.post('/api/v1/admin/createSubscription', auth.createSubscription);
-        // app.get('/api/v1/admin/getSubscription/:mainCategoryId/:categoryId', auth.getSubscription);
-        app.get('/api/v1/admin/getSubscription', auth.getSubscription);
         app.put("/api/v1/admin/Service/uploadService/:id", [authJwt.verifyToken], serviceUpload.array('image'), auth.updateImagesinService);
         app.get("/api/v1/admin/Service/top/:categoryId/:subCategoryId", auth.getTopSellingService);
         app.put("/api/v1/admin/Service/update/:id", [authJwt.verifyToken], auth.updateService);
@@ -134,8 +124,6 @@ module.exports = (app) => {
         app.get('/api/v1/admin/sp-agreements/:id', [authJwt.verifyToken], auth.getSPAgreementById);
         app.get('/api/v1/admin/all-training-videos', [authJwt.verifyToken], auth.getAllTrainingVideos);
         app.get('/api/v1/admin/training-videos/:id', [authJwt.verifyToken], auth.getTrainingVideoById);
-        app.get('/api/v1/admin/all-transportation-charges', [authJwt.verifyToken], auth.getAllTransportationCharges);
-        app.get('/api/v1/admin/transportation-charges/:id', [authJwt.verifyToken], auth.getTransportationChargeById);
         app.get('/api/v1/admin/referrals', [authJwt.verifyToken], auth.getAllReferrals);
         app.get('/api/v1/admin/referrals/:id', [authJwt.verifyToken], auth.getReferralById);
         app.get('/api/v1/admin/consent-forms', [authJwt.verifyToken], auth.getAllConsentForms);

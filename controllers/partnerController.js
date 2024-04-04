@@ -14,7 +14,6 @@ const orderModel = require('../models/orderModel');
 const offer = require('../models/offer');
 const ticket = require('../models/ticket');
 const SPAgreement = require('../models/spAgreementModel');
-const TransportationCharges = require('../models/transportationModel');
 const Training = require('../models/traningVideoModel');
 const ComplaintSuggestion = require('../models/complainet&suggestionModel');
 const Referral = require('../models/refferalModel');
@@ -559,55 +558,6 @@ exports.updateSPAgreement = async (req, res) => {
         } catch (error) {
                 console.error(error);
                 res.status(500).json({ error: 'Failed to update SP Agreement' });
-        }
-};
-
-exports.createTransportationCharges = async (req, res) => {
-        try {
-                const { amount, reason } = req.body;
-
-                let attachFile;
-
-                if (req.file) {
-                        attachFile = req.file ? req.file.path : "";
-                }
-                const transportationCharges = new TransportationCharges({
-                        amount,
-                        reason,
-                        attachFile
-                });
-
-                const savedTransportationCharges = await transportationCharges.save();
-
-                res.status(201).json({ status: 201, message: "created sucessfully", data: savedTransportationCharges });
-        } catch (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Failed to create transportation charges' });
-        }
-};
-
-exports.getAllTransportationCharges = async (req, res) => {
-        try {
-                const transportationCharges = await TransportationCharges.find();
-                res.status(200).json({ status: 200, message: "data retrived sucessfully", data: transportationCharges });
-        } catch (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Failed to fetch transportation charges' });
-        }
-};
-
-exports.getTransportationChargesById = async (req, res) => {
-        const transportationId = req.params.id;
-
-        try {
-                const transportationCharges = await TransportationCharges.findById(transportationId);
-                if (!transportationCharges) {
-                        return res.status(404).json({ message: 'Transportation Charges not found' });
-                }
-                res.json({ tatus: 200, message: "transportation Chasrges data retrived sucessfully", data: transportationCharges });
-        } catch (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Failed to get Transportation Charges' });
         }
 };
 
