@@ -16,6 +16,12 @@ const breedSchema = new mongoose.Schema({
     image: {
         type: String,
     },
+    size: {
+        type: String,
+    },
+    breedAggressive: {
+        type: String,
+    },
     status: {
         type: Boolean,
         default: false
