@@ -18,13 +18,19 @@ const breedSchema = new mongoose.Schema({
     },
     size: {
         type: String,
+        enum: ['Small', 'Medium', 'Large']
     },
     breedAggressive: {
         type: String,
+        enum: ['Non-Aggressive', 'Moderately Aggressive', 'Highly Aggressive']
     },
     status: {
         type: Boolean,
         default: false
+    },
+    type: {
+        type: String,
+        enum: ['Cat', 'Dog']
     },
 }, { timestamps: true });
 

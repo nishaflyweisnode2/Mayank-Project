@@ -122,15 +122,16 @@ exports.update = async (req, res) => {
 };
 exports.createBreed = async (req, res) => {
     try {
-        const { mainCategory: mainCategoryId, name, description, size, breedAggressive, status } = req.body;
+        const { mainCategory: mainCategoryId, name, description, size, breedAggressive, status, type } = req.body;
 
-        let findBreed = await Breed.findOne({ name });
+        let findBreed = await Breed.findOne({ name, mainCategory: mainCategoryId, type });
+        console.log(findBreed);
         if (findBreed) {
             return res.status(409).json({ message: "Breed already exists.", status: 409 });
         }
 
         let fileUrl = req.file ? req.file.path : "";
-        const data = { mainCategory: mainCategoryId, name, description, size, breedAggressive, status, image: fileUrl };
+        const data = { mainCategory: mainCategoryId, name, description, size, breedAggressive, status, type, image: fileUrl };
 
         if (mainCategoryId) {
             const findMainCategory = await mainCategory.findById(mainCategoryId);
@@ -150,6 +151,27 @@ exports.getBreeds = async (req, res) => {
     try {
         const breeds = await Breed.find().populate("mainCategory");
         return res.status(200).json({ status: 200, data: breeds });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: error.message });
+    }
+};
+exports.getBreedsByMaincategory = async (req, res) => {
+    try {
+        const mainCategoryId = req.params.id;
+        const type = req.query.type;
+
+        const category = await mainCategory.findById(mainCategoryId);
+        if (!category) {
+            return res.status(404).json({ message: "MainCategory Not Found", status: 404, data: {} });
+        }
+
+        if (type) {
+            const breeds = await Breed.find({ mainCategory: mainCategoryId, type: type }).populate("mainCategory");
+            return res.status(200).json({ status: 200, data: breeds });
+        } else {
+            const breeds = await Breed.find({ mainCategory: mainCategoryId }).populate("mainCategory");
+            return res.status(200).json({ status: 200, data: breeds });
+        }
     } catch (error) {
         return res.status(500).json({ status: 500, message: error.message });
     }
@@ -181,6 +203,7 @@ exports.updateBreed = async (req, res) => {
         breed.size = req.body.size || breed.size;
         breed.status = req.body.status || breed.status;
         breed.breedAggressive = req.body.breedAggressive || breed.breedAggressive;
+        breed.type = req.body.type || breed.type;
 
         await breed.save();
 
@@ -1838,6 +1861,7 @@ exports.createService = async (req, res) => {
             title: req.body.title,
             mainCategoryId: findMainCategory._id,
             type: req.body.type,
+            breedId: req.body.breedId,
         });
 
         if (existingService) {
@@ -2267,176 +2291,6 @@ exports.updateIsAddOnServices = async (req, res) => {
 };
 exports.createPackage1 = async (req, res) => {
     try {
-        const findMainCategory = await mainCategory.findById(req.body.mainCategoryId);
-
-        if (!findMainCategory) {
-            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
-        }
-
-        let findCategory;
-        const findSubCategories = [];
-
-        if (req.body.categoryId) {
-            findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: req.body.categoryId });
-
-            if (!findCategory) {
-                return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
-            }
-        } else {
-            const existingPackage = await Package.findOne({
-                title: req.body.title,
-                mainCategoryId: findMainCategory._id,
-                type: "Package",
-                packageType: req.body.packageType,
-            });
-
-            if (existingPackage) {
-                return res.status(409).json({ message: "Package already exists.", status: 409, data: {} });
-            }
-        }
-
-        if (req.body.subCategoryId && Array.isArray(req.body.subCategoryId)) {
-            for (const subCategoryId of req.body.subCategoryId) {
-                const findSubCategory = await subCategory.findOne({
-                    _id: subCategoryId,
-                    mainCategoryId: findMainCategory._id,
-                    categoryId: findCategory._id,
-                });
-
-                if (!findSubCategory) {
-                    return res.status(404).json({ message: "Subcategory Not Found", status: 404, data: {} });
-                }
-
-                findSubCategories.push(findSubCategory);
-            }
-        }
-
-        let discountPrice, originalPrice, discount = 0, totalTime;
-        if (req.body.timeInMin > 60) {
-            const hours = Math.floor(req.body.timeInMin / 60);
-            const minutes = req.body.timeInMin % 60;
-            totalTime = `${hours} hr ${minutes} min`;
-        } else {
-            const minutes = req.body.timeInMin % 60;
-            totalTime = `00 hr ${minutes} min`;
-        }
-
-        if (req.body.discountActive === "true") {
-            originalPrice = req.body.originalPrice;
-            discountPrice = req.body.discountPrice;
-
-            if (originalPrice && discountPrice) {
-                discount = ((originalPrice - discountPrice) / originalPrice) * 100;
-                discount = Math.max(discount, 0);
-                discount = Math.round(discount);
-            }
-        }
-
-        let images = [];
-        if (req.files) {
-            for (let j = 0; j < req.files.length; j++) {
-                let obj = {
-                    img: req.files[j].path,
-                };
-                images.push(obj);
-            }
-        }
-
-        let items = [], services = [], servicePackages = [];
-
-        if (req.body.services) {
-            for (let i = 0; i < req.body.services.length; i++) {
-                let findItem = await service.findById(req.body.services[i]);
-
-                if (!findItem) {
-                    return res.status(404).json({ message: `Service Not Found`, status: 404, data: {} });
-                }
-
-                let item1 = {
-                    service: findItem._id,
-                };
-                services.push(item1);
-            }
-        }
-
-
-        if (req.body.items) {
-            for (let i = 0; i < req.body.items.length; i++) {
-                let findItem = await item.findById(req.body.items[i]);
-
-                if (!findItem) {
-                    return res.status(404).json({ message: `Item Not Found`, status: 404, data: {} });
-                }
-
-                let item1 = {
-                    item: findItem._id,
-                };
-                items.push(item1);
-            }
-        }
-
-        const packageData = {
-            mainCategoryId: findMainCategory._id,
-            categoryId: findCategory ? findCategory._id : null,
-            subCategoryId: findSubCategories.map(subCategory => subCategory._id),
-            title: req.body.title,
-            description: req.body.description,
-            originalPrice: req.body.originalPrice,
-            discountActive: req.body.discountActive,
-            discount: discount,
-            discountPrice: discountPrice,
-            totalTime: totalTime,
-            timeInMin: req.body.timeInMin,
-            images: images,
-            E4uSafety: req.body.E4uSafety,
-            thingsToKnow: req.body.thingsToKnow,
-            E4uSuggestion: req.body.E4uSuggestion,
-            type: "Package",
-            packageType: req.body.packageType,
-            selected: req.body.packageType === "Normal" ? false : true,
-            selectedCount: req.body.selectedCount || 0,
-            services: services,
-            items: items,
-        };
-
-        const category = await Package.create(packageData);
-
-        if (req.body.serviceTypesId) {
-            const serviceTypeRef = await ServiceTypeRef.create({
-                service: category._id,
-                serviceType: req.body.serviceTypesId,
-            });
-
-            category.serviceTypes = serviceTypeRef._id;
-            await category.save();
-        }
-
-        for (let i = 0; i < req.body.selectedCount; i++) {
-            let obj1 = {
-                serviceId: category._id,
-                categoryId: findCategory ? findCategory._id : null,
-                services: services,
-            }
-            let savePackage = await servicePackage.create(obj1);
-            if (savePackage) {
-                await Package.findByIdAndUpdate({ _id: category._id }, { $push: { servicePackageId: savePackage._id } }, { new: true })
-            }
-            servicePackages.push(savePackage);
-        }
-
-        category.servicePackages = servicePackages;
-        await category.save();
-
-
-        return res.status(200).json({ message: "Package added successfully.", status: 200, data: category });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
-    }
-};
-
-exports.createPackage = async (req, res) => {
-    try {
         let { mainCategoryId, categoryId, subCategoryId, title, packageType, description, originalPrice, discountActive, discountPrice, timeInMin, selectedCount, services, addOnServices, validUpTo, status } = req.body;
 
         const findMainCategory = await mainCategory.findById(mainCategoryId);
@@ -2598,11 +2452,212 @@ exports.createPackage = async (req, res) => {
         return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
     }
 };
+exports.createPackage = async (req, res) => {
+    try {
+        let { mainCategoryId, categoryId, subCategoryId, title, packageType, description, timeInMin, selectedCount, services, addOnServices, validUpTo, status, variations } = req.body;
 
+        const findMainCategory = await mainCategory.findById(mainCategoryId);
+        if (!findMainCategory) {
+            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
+        }
+
+        let findCategory;
+        const findSubCategories = [];
+
+        if (categoryId) {
+            findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: categoryId });
+            if (!findCategory) {
+                return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
+            }
+        } else {
+            const existingPackage = await Package.findOne({
+                title,
+                mainCategoryId: findMainCategory._id,
+                type: "Package",
+                packageType,
+            });
+
+            if (existingPackage) {
+                return res.status(409).json({ message: "Package already exists.", status: 409, data: {} });
+            }
+        }
+
+        if (subCategoryId && Array.isArray(subCategoryId)) {
+            for (const currentSubCategoryId of subCategoryId) {
+                const findSubCategory = await subCategory.findOne({
+                    _id: currentSubCategoryId,
+                    mainCategoryId: findMainCategory._id,
+                    categoryId: findCategory ? findCategory._id : null,
+                });
+
+                if (!findSubCategory) {
+                    return res.status(404).json({ message: "Subcategory Not Found", status: 404, data: {} });
+                }
+
+                findSubCategories.push(findSubCategory);
+            }
+        }
+
+        let totalTime;
+        let totalTimeInMin = 0;
+
+        if (timeInMin && timeInMin > 0) {
+            const hours = Math.floor(timeInMin / 60);
+            const minutes = timeInMin % 60;
+            totalTime = `${hours} hr ${minutes} min`;
+        } else {
+            let totalServiceTimeInMin = 0;
+            for (const serviceId of services) {
+                const findService = await service.findById(serviceId);
+                if (findService) {
+                    totalServiceTimeInMin += findService.timeInMin || 0;
+                    totalTimeInMin += findService.timeInMin || 0;
+                }
+            }
+            const hours = Math.floor(totalServiceTimeInMin / 60);
+            const minutes = totalServiceTimeInMin % 60;
+            totalTime = `${hours} hr ${minutes} min`;
+        }
+
+        let images = [];
+        if (req.files) {
+            images = req.files.map(file => ({ img: file.path }));
+        }
+
+        if (!variations || !Array.isArray(variations) || variations.length === 0) {
+            variations = [];
+
+            for (const serviceId of services) {
+                const findService = await service.findById(serviceId);
+
+                if (findService) {
+                    let walksPerDay = 0;
+                    let daysPerWeek = 0;
+                    let MonthlyoriginalPrice = 0;
+                    let MonthlydiscountActive;
+                    let MonthlydiscountPrice = 0;
+                    let threeMonthoriginalPrice = 0;
+                    let threeMonthdiscountActive;
+                    let threeMonthdiscountPrice = 0;
+                    let sixMonthoriginalPrice = 0;
+                    let sixMonthdiscountActive;
+                    let sixMonthdiscountPrice = 0;
+                    let twelveMonthoriginalPrice = 0;
+                    let twelveMonthdiscountActive;
+                    let twelveMonthdiscountPrice = 0;
+
+                    if (findService.variations && Array.isArray(findService.variations) && findService.variations.length > 0) {
+                        const firstVariation = findService.variations[0];
+
+                        walksPerDay = firstVariation.walksPerDay || 0;
+                        daysPerWeek = firstVariation.daysPerWeek || 0;
+                        MonthlyoriginalPrice = firstVariation.MonthlyoriginalPrice || 0;
+                        MonthlydiscountPrice = firstVariation.MonthlydiscountPrice || 0;
+                        MonthlydiscountActive = firstVariation.MonthlydiscountActive || false;
+                        threeMonthoriginalPrice = firstVariation.threeMonthoriginalPrice || 0;
+                        threeMonthdiscountPrice = firstVariation.threeMonthdiscountPrice || 0;
+                        threeMonthdiscountActive = firstVariation.threeMonthdiscountActive || false;
+                        sixMonthoriginalPrice = firstVariation.sixMonthoriginalPrice || 0;
+                        sixMonthdiscountPrice = firstVariation.sixMonthdiscountPrice || 0;
+                        sixMonthdiscountActive = firstVariation.sixMonthdiscountActive || false;
+                        twelveMonthoriginalPrice = firstVariation.twelveMonthoriginalPrice || 0;
+                        twelveMonthdiscountPrice = firstVariation.twelveMonthdiscountPrice || 0;
+                        twelveMonthdiscountActive = firstVariation.twelveMonthdiscountActive || false;
+                    } else {
+                        walksPerDay = findService.walksPerDay || 0;
+                        daysPerWeek = findService.daysPerWeek || 0;
+                        MonthlyoriginalPrice = findService.MonthlyoriginalPrice || 0;
+                        MonthlydiscountPrice = findService.MonthlydiscountPrice || 0;
+                        MonthlydiscountActive = findService.MonthlydiscountActive || false;
+                        threeMonthoriginalPrice = findService.threeMonthoriginalPrice || 0;
+                        threeMonthdiscountPrice = findService.threeMonthdiscountPrice || 0;
+                        threeMonthdiscountActive = findService.threeMonthdiscountActive || false;
+                        sixMonthoriginalPrice = findService.sixMonthoriginalPrice || 0;
+                        sixMonthdiscountPrice = findService.sixMonthdiscountPrice || 0;
+                        sixMonthdiscountActive = findService.sixMonthdiscountActive || false;
+                        twelveMonthoriginalPrice = findService.twelveMonthoriginalPrice || 0;
+                        twelveMonthdiscountPrice = findService.twelveMonthdiscountPrice || 0;
+                        twelveMonthdiscountActive = findService.twelveMonthdiscountActive || false;
+                    }
+
+                    variations.push({
+                        walksPerDay,
+                        daysPerWeek,
+                        MonthlyoriginalPrice,
+                        MonthlydiscountActive,
+                        MonthlydiscountPrice,
+                        threeMonthoriginalPrice,
+                        threeMonthdiscountActive,
+                        threeMonthdiscountPrice,
+                        sixMonthoriginalPrice,
+                        sixMonthdiscountActive,
+                        sixMonthdiscountPrice,
+                        twelveMonthoriginalPrice,
+                        twelveMonthdiscountActive,
+                        twelveMonthdiscountPrice,
+                    });
+                }
+            }
+        }
+
+        const variationsWithDiscounts = variations.map(variation => {
+            const calculateDiscount = (originalPrice, discountPrice) => {
+                if (originalPrice && discountPrice) {
+                    let discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                    discount = Math.max(discount, 0);
+                    discount = Math.round(discount);
+                    return discount;
+                }
+                return 0;
+            };
+
+            return {
+                ...variation,
+                Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
+                threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
+                sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
+                twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
+            };
+        });
+
+        let preparedAddOnServices = [];
+        if (addOnServices && Array.isArray(addOnServices)) {
+            preparedAddOnServices = addOnServices.map(serviceId => ({ service: serviceId }));
+        }
+
+        const packageData = {
+            mainCategoryId: findMainCategory._id,
+            categoryId: findCategory ? findCategory._id : null,
+            subCategoryId: findSubCategories.map(subCategory => subCategory._id),
+            title,
+            description,
+            totalTime,
+            timeInMin: timeInMin || totalTimeInMin,
+            images,
+            type: "Package",
+            packageType,
+            selected: packageType ? true : false,
+            selectedCount: packageType === "Basic" || packageType === "Elite" ? selectedCount || 0 : 0,
+            services: services.map(serviceId => ({ service: serviceId })),
+            addOnServices: preparedAddOnServices,
+            status,
+            validUpTo,
+            variations: variationsWithDiscounts,
+        };
+
+        const createdPackage = await Package.create(packageData);
+
+        return res.status(200).json({ message: "Package added successfully.", status: 200, data: createdPackage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
 exports.getPackage = async (req, res) => {
     try {
         const findMainCategory = await mainCategory.findById({ _id: req.params.mainCategoryId });
         if (!findMainCategory) {
+            
             return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
         }
 
@@ -2876,7 +2931,6 @@ exports.removePackage = async (req, res) => {
         return res.status(200).json({ message: "Package Deleted Successfully!" });
     }
 };
-
 exports.updatePackage = async (req, res) => {
     try {
         const { id } = req.params;
@@ -2939,7 +2993,6 @@ exports.updatePackage = async (req, res) => {
         return res.status(500).json({ status: 500, message: "internal server error ", data: error.message, });
     }
 };
-
 exports.updateImagesinPackage = async (req, res) => {
     const { id } = req.params;
     let findPackage = await Package.findById({ _id: id });
@@ -2962,7 +3015,6 @@ exports.updateImagesinPackage = async (req, res) => {
         return res.status(200).json({ message: "Updated Successfully", data: update });
     }
 };
-
 exports.addOffer = async (req, res) => {
     try {
         if (!req.body.userId) {

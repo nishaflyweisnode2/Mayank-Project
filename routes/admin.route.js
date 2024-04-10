@@ -22,6 +22,7 @@ module.exports = (app) => {
         app.delete("/api/v1/admin/Banner/deleteBanner/:id", [authJwt.verifyToken], auth.DeleteBanner);
         app.post('/api/v1/admin/breed', [authJwt.verifyToken], BreedUpload.single('image'), auth.createBreed);
         app.get('/api/v1/admin/breed', [authJwt.verifyToken], auth.getBreeds);
+        app.get('/api/v1/admin/breed/maincategory/:id', [authJwt.verifyToken], auth.getBreedsByMaincategory);
         app.get('/api/v1/admin/breed/:id', [authJwt.verifyToken], auth.getBreedById);
         app.put('/api/v1/admin/breed/:id', [authJwt.verifyToken], BreedUpload.single('image'), auth.updateBreed);
         app.delete('/api/v1/admin/breed/:id', [authJwt.verifyToken], auth.deleteBreed);

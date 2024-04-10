@@ -13,8 +13,8 @@ const serviceSchema = new Schema({
     timeInMin: { type: Number },
     totalTime: { type: String },
     variations: [{
-        walksPerDay: { type: Number, required: true },
-        daysPerWeek: { type: Number, required: true },
+        walksPerDay: { type: Number, },
+        daysPerWeek: { type: Number, },
         MonthlyoriginalPrice: { type: Number },
         MonthlydiscountActive: { type: Boolean, default: false },
         Monthlydiscount: { type: Number },
