@@ -147,7 +147,26 @@ module.exports = (app) => {
         app.get('/api/v1/admin/slot/:id', [authJwt.verifyToken], auth.getSlotById);
         app.put('/api/v1/admin/slot/:id', [authJwt.verifyToken], auth.updateSlotById);
         app.delete('/api/v1/admin/slot/:id', [authJwt.verifyToken], auth.deleteSlotById);
-
+        app.post('/api/v1/admin/BreedScore', [authJwt.verifyToken], auth.createBreedScore);
+        app.get('/api/v1/admin/BreedScore', [authJwt.verifyToken], auth.getAllBreedScores);
+        app.get('/api/v1/admin/BreedScore/:id', [authJwt.verifyToken], auth.getBreedScoreById);
+        app.put('/api/v1/admin/BreedScore/:id', [authJwt.verifyToken], auth.updateBreedScoreById);
+        app.delete('/api/v1/admin/BreedScore/:id', [authJwt.verifyToken], auth.deleteBreedScoreById);
+        app.post('/api/v1/admin/breedAggressiveScores', [authJwt.verifyToken], auth.createBreedAggressiveScore);
+        app.get('/api/v1/admin/breedAggressiveScores', [authJwt.verifyToken], auth.getAllBreedAggressiveScores);
+        app.get('/api/v1/admin/breedAggressiveScores/:id', [authJwt.verifyToken], auth.getBreedAggressiveScoresById);
+        app.put('/api/v1/admin/breedAggressiveScores/:id', [authJwt.verifyToken], auth.updateBreedAggressiveScore);
+        app.delete('/api/v1/admin/api/v1/admin/breedAggressiveScores/:id', [authJwt.verifyToken], auth.deleteBreedAggressiveScore);
+        app.post('/api/v1/admin/transport-scores', [authJwt.verifyToken], auth.createTransportScore);
+        app.get('/api/v1/admin/transport-scores', [authJwt.verifyToken], auth.getAllTransportScores);
+        app.get('/api/v1/admin/transport-scores/:id', [authJwt.verifyToken], auth.getTransportScoreById);
+        app.put('/api/v1/admin/transport-scores/:id', [authJwt.verifyToken], auth.updateTransportScoreById);
+        app.delete('/api/v1/admin/transport-scores/:id', [authJwt.verifyToken], auth.deleteTransportScoreById);
+        app.post('/api/v1/admin/proximityScores', [authJwt.verifyToken], auth.createProximityScore);
+        app.get('/api/v1/admin/proximityScores', [authJwt.verifyToken], auth.getAllProximityScores);
+        app.get('/api/v1/admin/proximityScores/:id', [authJwt.verifyToken], auth.getProximityScoreById);
+        app.put('/api/v1/admin/proximityScores/:id', [authJwt.verifyToken], auth.updateProximityScore);
+        app.delete('/api/v1/admin/proximityScores/:id', [authJwt.verifyToken], auth.deleteProximityScore);
 
 
 

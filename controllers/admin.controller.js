@@ -38,6 +38,10 @@ const Testimonial = require("../models/testimonial");
 const Slot = require('../models/SlotModel');
 const moment = require('moment');
 const Breed = require('../models/breedModel');
+const BreedScore = require('../models/breedScoreModel');
+const BreedAggressiveScore = require('../models/breedAggresiveScoreModel');
+const TransportScore = require('../models/transportScoreModel');
+const ProximityScore = require('../models/proximityScoreModel');
 
 
 
@@ -2657,7 +2661,7 @@ exports.getPackage = async (req, res) => {
     try {
         const findMainCategory = await mainCategory.findById({ _id: req.params.mainCategoryId });
         if (!findMainCategory) {
-            
+
             return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
         }
 
@@ -3574,10 +3578,10 @@ exports.getTrainingVideoById = async (req, res) => {
 exports.getAllReferrals = async (req, res) => {
     try {
         const referrals = await Referral.find();
-        res.status(200).json({ success: true, data: referrals });
+        res.status(200).json({ status: 200, data: referrals });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, error: 'Failed to fetch referrals' });
+        res.status(500).json({ status: 500, error: 'Failed to fetch referrals' });
     }
 };
 
@@ -3587,13 +3591,13 @@ exports.getReferralById = async (req, res) => {
         const referral = await Referral.findById(referralId);
 
         if (!referral) {
-            return res.status(404).json({ success: false, error: 'Referral not found' });
+            return res.status(404).json({ status: 500, error: 'Referral not found' });
         }
 
-        res.status(200).json({ success: true, data: referral });
+        res.status(200).json({ status: 200, data: referral });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, error: 'Failed to fetch referral' });
+        res.status(500).json({ status: 500, error: 'Failed to fetch referral' });
     }
 };
 
@@ -4247,8 +4251,275 @@ exports.deleteSlotById = async (req, res) => {
     }
 };
 
+exports.createBreedScore = async (req, res) => {
+    try {
+        const { breedSize, score } = req.body;
+        const newBreedScore = await BreedScore.create({ breedSize, score });
+        return res.status(201).json({ status: 201, message: 'Breed score created successfully.', data: newBreedScore });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to create breed score.', error: error.message });
+    }
+};
 
+exports.getAllBreedScores = async (req, res) => {
+    try {
+        const breedScores = await BreedScore.find();
+        return res.status(200).json({ status: 200, message: 'Breed scores retrieved successfully.', data: breedScores });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to retrieve breed scores.', error: error.message });
+    }
+};
 
+exports.getBreedScoreById = async (req, res) => {
+    try {
+        const breedScore = await BreedScore.findById(req.params.id);
+        if (!breedScore) {
+            return res.status(404).json({ status: 404, message: 'Breed score not found.' });
+        }
+        return res.status(200).json({ status: 200, message: 'Breed score retrieved successfully.', data: breedScore });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to retrieve breed score.', error: error.message });
+    }
+};
+
+exports.updateBreedScoreById = async (req, res) => {
+    try {
+        const { breedSize, score } = req.body;
+        const updatedBreedScore = await BreedScore.findByIdAndUpdate(req.params.id, { breedSize, score }, { new: true });
+        if (!updatedBreedScore) {
+            return res.status(404).json({ status: 404, message: 'Breed score not found.' });
+        }
+        return res.status(200).json({ status: 200, message: 'Breed score updated successfully.', data: updatedBreedScore });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to update breed score.', error: error.message });
+    }
+};
+
+exports.deleteBreedScoreById = async (req, res) => {
+    try {
+        const deletedBreedScore = await BreedScore.findByIdAndDelete(req.params.id);
+        if (!deletedBreedScore) {
+            return res.status(404).json({ status: 404, message: 'Breed score not found.' });
+        }
+        return res.status(200).json({ status: 200, message: 'Breed score deleted successfully.' });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to delete breed score.', error: error.message });
+    }
+};
+
+exports.createBreedAggressiveScore = async (req, res) => {
+    try {
+        const { breedAggressive, score } = req.body;
+
+        const existingScore = await BreedAggressiveScore.findOne({ BreedAggressive: breedAggressive });
+        if (existingScore) {
+            return res.status(409).json({ message: "Breed aggressiveness score already exists.", status: 409 });
+        }
+
+        const newScore = new BreedAggressiveScore({
+            BreedAggressive: breedAggressive,
+            score: score
+        });
+
+        await newScore.save();
+
+        return res.status(201).json({ message: "Breed aggressiveness score created successfully.", status: 201, data: newScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
+
+exports.getAllBreedAggressiveScores = async (req, res) => {
+    try {
+        const scores = await BreedAggressiveScore.find();
+
+        return res.status(200).json({ message: "Breed aggressiveness scores retrieved successfully.", status: 200, data: scores });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
+
+exports.getBreedAggressiveScoresById = async (req, res) => {
+    try {
+        const scores = await BreedAggressiveScore.findById(req.params.id);
+
+        return res.status(200).json({ message: "Breed aggressiveness scores retrieved successfully.", status: 200, data: scores });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
+
+exports.updateBreedAggressiveScore = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { score } = req.body;
+
+        const existingScore = await BreedAggressiveScore.findById(id);
+        if (!existingScore) {
+            return res.status(404).json({ message: "Breed aggressiveness score not found.", status: 404 });
+        }
+
+        existingScore.score = score;
+
+        await existingScore.save();
+
+        return res.status(200).json({ message: "Breed aggressiveness score updated successfully.", status: 200, data: existingScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
+
+exports.deleteBreedAggressiveScore = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedScore = await BreedAggressiveScore.findByIdAndDelete(id);
+        if (!deletedScore) {
+            return res.status(404).json({ message: "Breed aggressiveness score not found.", status: 404 });
+        }
+
+        return res.status(200).json({ message: "Breed aggressiveness score deleted successfully.", status: 200, data: deletedScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
+
+exports.createTransportScore = async (req, res) => {
+    try {
+        const { modeOfTransport, distanceRange_0_1_Kms, distanceRange_1_5_Kms, distanceRange_5_10_Kms } = req.body;
+        const transportScore = new TransportScore({
+            modeOfTransport,
+            distanceRange_0_1_Kms,
+            distanceRange_1_5_Kms,
+            distanceRange_5_10_Kms
+        });
+        const savedTransportScore = await transportScore.save();
+        return res.status(201).json({ status: 201, data: savedTransportScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error" });
+    }
+};
+
+exports.getAllTransportScores = async (req, res) => {
+    try {
+        const transportScores = await TransportScore.find();
+        return res.status(200).json({ status: 200, data: transportScores });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error" });
+    }
+};
+
+exports.getTransportScoreById = async (req, res) => {
+    try {
+        const transportScore = await TransportScore.findById(req.params.id);
+        if (!transportScore) {
+            return res.status(404).json({ message: "Transport score not found" });
+        }
+        return res.status(200).json({ status: 200, data: transportScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error" });
+    }
+};
+
+exports.updateTransportScoreById = async (req, res) => {
+    try {
+        const { modeOfTransport, distanceRange_0_1_Kms, distanceRange_1_5_Kms, distanceRange_5_10_Kms } = req.body;
+        const transportScore = await TransportScore.findByIdAndUpdate(
+            req.params.id,
+            { modeOfTransport, distanceRange_0_1_Kms, distanceRange_1_5_Kms, distanceRange_5_10_Kms },
+            { new: true }
+        );
+        if (!transportScore) {
+            return res.status(404).json({ message: "Transport score not found" });
+        }
+        return res.status(200).json({ status: 200, data: transportScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error" });
+    }
+};
+
+exports.deleteTransportScoreById = async (req, res) => {
+    try {
+        const transportScore = await TransportScore.findByIdAndDelete(req.params.id);
+        if (!transportScore) {
+            return res.status(404).json({ message: "Transport score not found" });
+        }
+        return res.status(200).json({ status: 200, message: 'sucessfully deleted' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error" });
+    }
+};
+
+exports.createProximityScore = async (req, res) => {
+    try {
+        const { distanceRange, score } = req.body;
+        const proximityScore = new ProximityScore({ distanceRange, score });
+        const savedScore = await proximityScore.save();
+        return res.status(201).json({ status: 201, message: 'Proximity score created successfully', data: savedScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.getAllProximityScores = async (req, res) => {
+    try {
+        const scores = await ProximityScore.find();
+        return res.status(200).json({ status: 200, data: scores });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.getProximityScoreById = async (req, res) => {
+    try {
+        const score = await ProximityScore.findById(req.params.id);
+        if (!score) {
+            return res.status(404).json({ status: 404, message: 'Proximity score not found' });
+        }
+        return res.status(200).json({ status: 200, data: score });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.updateProximityScore = async (req, res) => {
+    try {
+        const updatedScore = await ProximityScore.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedScore) {
+            return res.status(404).json({ status: 404, message: 'Proximity score not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Proximity score updated successfully', data: updatedScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.deleteProximityScore = async (req, res) => {
+    try {
+        const deletedScore = await ProximityScore.findByIdAndDelete(req.params.id);
+        if (!deletedScore) {
+            return res.status(404).json({ status: 404, message: 'Proximity score not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Proximity score deleted successfully', data: deletedScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
 
 
 

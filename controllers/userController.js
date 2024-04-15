@@ -1791,7 +1791,7 @@ exports.replyOnTicket = async (req, res) => {
 exports.addToCartSingleService = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
-                console.log("userdata", userData);
+                // console.log("userdata", userData);
                 if (!userData || !userData.city /*|| !userData.sector*/) {
                         return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
                 }
@@ -1799,55 +1799,36 @@ exports.addToCartSingleService = async (req, res) => {
                 const findPet = await Pet.findOne({ user: userData._id });
                 const findCart = await Cart.findOne({ userId: userData._id });
                 const findService = await service.findById({ _id: req.body._id });
+                // console.log("findPet", findPet);
+                console.log("findService", findService);
+                console.log("findService.variations.MonthlyoriginalPrice", findService.variations.MonthlyoriginalPrice);
 
                 if (!findService) {
                         return res.status(404).json({ status: 404, message: "Service not found" });
                 }
 
-                let userCity = userData.city;
-                // let userSector = userData.sector;
-
-                let locationData;
-
-                if (userCity /*&& userSector*/ && findService.location) {
-                        locationData = findService.location.find(location =>
-                                location.city.toString() === userCity.toString()
-                                //  &&location.sector.toString() === userSector.toString()
-                        );
-                }
-                console.log("location data", locationData);
                 let originalPrice = 0;
                 let discountActive = false;
                 let discountPrice = 0;
                 let discount = 0;
 
-                if (!locationData || locationData === undefined) {
-                        originalPrice = findService.originalPrice || 0;
-                        discountActive = findService.discountActive || false;
-                        discountPrice = findService.discountPrice || 0;
+                if (findService.variations && findService.variations.length > 0) {
+                        const variation = findService.variations[0];
 
-                        if (discountActive && originalPrice > 0 && discountPrice > 0) {
-                                discount = ((originalPrice - discountPrice) / originalPrice) * 100;
-                                discount = Math.max(discount, 0);
-                                discount = Math.round(discount);
-                                console.log("originalPrice", originalPrice);
-                                console.log("discountPrice", discountPrice);
-                                console.log("discountActive", discountActive);
-                        }
-                } else if (locationData) {
-                        originalPrice = locationData.originalPrice || 0;
-                        discountActive = locationData.discountActive || false;
-                        discountPrice = locationData.discountPrice || 0;
-
-                        if (discountActive && originalPrice > 0 && discountPrice > 0) {
-                                discount = ((originalPrice - discountPrice) / originalPrice) * 100;
-                                discount = Math.max(discount, 0);
-                                discount = Math.round(discount);
-                        }
+                        originalPrice = variation.MonthlyoriginalPrice || 0;
+                        discountActive = variation.MonthlydiscountActive || false;
+                        discountPrice = variation.MonthlydiscountPrice || 0;
                 }
-                console.log("originalPrice1", originalPrice);
-                console.log("discountPrice1", discountPrice);
-                console.log("discountActive1", discountActive);
+
+                if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                        discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                        console.log("originalPrice", originalPrice);
+                        console.log("discountPrice", discountPrice);
+                        console.log("discountActive", discountActive);
+                }
+
                 let Charged = [];
                 let paidAmount = 0;
                 let totalAmount = 0;

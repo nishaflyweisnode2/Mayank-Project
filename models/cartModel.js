@@ -206,8 +206,9 @@ const CartSchema = new Schema({
                 type: Schema.Types.ObjectId,
                 ref: 'Breed',
         },
-        age: {
-                type: Number,
+        pets: {
+                type: Schema.Types.ObjectId,
+                ref: 'Pets',
         },
 }, { timestamps: true });
 
