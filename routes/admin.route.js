@@ -167,6 +167,11 @@ module.exports = (app) => {
         app.get('/api/v1/admin/proximityScores/:id', [authJwt.verifyToken], auth.getProximityScoreById);
         app.put('/api/v1/admin/proximityScores/:id', [authJwt.verifyToken], auth.updateProximityScore);
         app.delete('/api/v1/admin/proximityScores/:id', [authJwt.verifyToken], auth.deleteProximityScore);
+        app.post('/api/v1/admin/serviceableArea', [authJwt.verifyToken], auth.createServiceableAreaRadius);
+        app.get('/api/v1/admin/serviceableArea', [authJwt.verifyToken], auth.getAllServiceableAreaRadius);
+        app.get('/api/v1/admin/serviceableArea/:id', [authJwt.verifyToken], auth.getServiceableAreaRadiusById);
+        app.put('/api/v1/admin/serviceableArea/:id', [authJwt.verifyToken], auth.updateServiceableAreaRadius);
+        app.delete('/api/v1/admin/serviceableArea/:id', [authJwt.verifyToken], auth.deleteServiceableAreaRadius);
 
 
 

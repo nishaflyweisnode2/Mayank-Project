@@ -42,6 +42,7 @@ const BreedScore = require('../models/breedScoreModel');
 const BreedAggressiveScore = require('../models/breedAggresiveScoreModel');
 const TransportScore = require('../models/transportScoreModel');
 const ProximityScore = require('../models/proximityScoreModel');
+const ServiceableAreaRadius = require('../models/serviceableRadiusModel');
 
 
 
@@ -3076,9 +3077,9 @@ exports.addOffer = async (req, res) => {
         const saveStore = await offer(obj).save();
 
         if (saveStore) {
-            res.status(200).json({ status: 200, message: 'Offer added successfully', data: saveStore });
+            return res.status(200).json({ status: 200, message: 'Offer added successfully', data: saveStore });
         } else {
-            res.status(500).json({ status: 500, message: 'Failed to add offer' });
+            return res.status(500).json({ status: 500, message: 'Failed to add offer' });
         }
     } catch (error) {
         console.error(error);
@@ -3507,7 +3508,7 @@ exports.getAllLeaves = async (req, res) => {
         res.json({ status: 200, message: ' All Leave data retrieved successfully', data: allLeaves });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to retrieve leave requests' });
+        return res.status(500).json({ error: 'Failed to retrieve leave requests' });
     }
 };
 exports.approveLeave = async (req, res) => {
@@ -3517,7 +3518,7 @@ exports.approveLeave = async (req, res) => {
         res.json({ status: 200, message: 'Approved leave successfully', data: updatedLeave });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to approve leave' });
+        return res.status(500).json({ error: 'Failed to approve leave' });
     }
 };
 exports.cancelLeave = async (req, res) => {
@@ -3527,7 +3528,7 @@ exports.cancelLeave = async (req, res) => {
         res.json({ status: 200, message: 'Cancel Leave successfully', data: updatedLeave });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to cancel leave' });
+        return res.status(500).json({ error: 'Failed to cancel leave' });
     }
 };
 exports.getAllSPAgreements = async (req, res) => {
@@ -3536,7 +3537,7 @@ exports.getAllSPAgreements = async (req, res) => {
         res.json({ status: 200, message: 'All SpAgreement data retrieved successfully', data: allSPAgreements });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to retrieve SP agreements' });
+        return res.status(500).json({ error: 'Failed to retrieve SP agreements' });
     }
 };
 exports.getSPAgreementById = async (req, res) => {
@@ -3549,7 +3550,7 @@ exports.getSPAgreementById = async (req, res) => {
         res.json({ status: 200, message: 'SpAgreement retrieved successfully', data: spAgreement });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to retrieve SP agreement' });
+        return res.status(500).json({ error: 'Failed to retrieve SP agreement' });
     }
 };
 exports.getAllTrainingVideos = async (req, res) => {
@@ -3558,7 +3559,7 @@ exports.getAllTrainingVideos = async (req, res) => {
         res.json({ status: 200, message: 'All traning Video retrieved successfully', data: allTrainingVideos });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to retrieve training videos' });
+        return res.status(500).json({ error: 'Failed to retrieve training videos' });
     }
 };
 exports.getTrainingVideoById = async (req, res) => {
@@ -3571,17 +3572,17 @@ exports.getTrainingVideoById = async (req, res) => {
         res.json({ status: 200, message: 'Traning Video retrieved successfully', data: trainingVideo });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to retrieve training video' });
+        return res.status(500).json({ error: 'Failed to retrieve training video' });
     }
 };
 
 exports.getAllReferrals = async (req, res) => {
     try {
         const referrals = await Referral.find();
-        res.status(200).json({ status: 200, data: referrals });
+        return res.status(200).json({ status: 200, data: referrals });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 500, error: 'Failed to fetch referrals' });
+        return res.status(500).json({ status: 500, error: 'Failed to fetch referrals' });
     }
 };
 
@@ -3594,10 +3595,10 @@ exports.getReferralById = async (req, res) => {
             return res.status(404).json({ status: 500, error: 'Referral not found' });
         }
 
-        res.status(200).json({ status: 200, data: referral });
+        return res.status(200).json({ status: 200, data: referral });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ status: 500, error: 'Failed to fetch referral' });
+        return res.status(500).json({ status: 500, error: 'Failed to fetch referral' });
     }
 };
 
@@ -3676,14 +3677,14 @@ exports.createCity = async (req, res) => {
 
         const savedCity = await newCity.save();
 
-        res.status(201).json({
+        return res.status(201).json({
             status: 201,
             message: 'City created successfully',
             data: savedCity,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3691,14 +3692,14 @@ exports.getAllCities = async (req, res) => {
     try {
         const cities = await City.find();
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'Cities retrieved successfully',
             data: cities,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3710,14 +3711,14 @@ exports.getCityById = async (req, res) => {
             return res.status(404).json({ message: 'City not found' });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'City retrieved successfully',
             data: city,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3754,14 +3755,14 @@ exports.updateCityById = async (req, res) => {
 
         const updatedCity = await existingCity.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'City updated successfully',
             data: updatedCity,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3773,14 +3774,14 @@ exports.deleteCityById = async (req, res) => {
             return res.status(404).json({ message: 'City not found' });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'City deleted successfully',
             data: deletedCity,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3814,14 +3815,14 @@ exports.createArea = async (req, res) => {
 
         const savedArea = await newArea.save();
 
-        res.status(201).json({
+        return res.status(201).json({
             status: 201,
             message: 'Area created successfully',
             data: savedArea,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3829,14 +3830,14 @@ exports.getAllAreas = async (req, res) => {
     try {
         const areas = await Area.find().populate('city');
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'Areas retrieved successfully',
             data: areas,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3848,14 +3849,14 @@ exports.getAreaById = async (req, res) => {
             return res.status(404).json({ message: 'Area not found' });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'Area retrieved successfully',
             data: area,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3874,14 +3875,14 @@ exports.getAreasByCityId = async (req, res) => {
 
         const areas = await Area.find({ city: cityId });
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'Areas retrieved successfully',
             data: areas,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3917,14 +3918,14 @@ exports.updateAreaById = async (req, res) => {
             return res.status(404).json({ message: 'Area not found' });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'Area updated successfully',
             data: updatedArea,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3936,14 +3937,14 @@ exports.deleteAreaById = async (req, res) => {
             return res.status(404).json({ message: 'Area not found' });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             status: 200,
             message: 'Area deleted successfully',
             data: deletedArea,
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        return res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -3968,20 +3969,20 @@ exports.createTestimonial = async (req, res) => {
         });
 
         const savedTestimonial = await testimonial.save();
-        res.status(201).json({ status: 201, data: savedTestimonial });
+        return res.status(201).json({ status: 201, data: savedTestimonial });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to create testimonial" });
+        return res.status(500).json({ error: "Failed to create testimonial" });
     }
 };
 
 exports.getAllTestimonials = async (req, res) => {
     try {
         const testimonials = await Testimonial.find();
-        res.status(200).json({ status: 200, data: testimonials });
+        return res.status(200).json({ status: 200, data: testimonials });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to retrieve testimonials" });
+        return res.status(500).json({ error: "Failed to retrieve testimonials" });
     }
 };
 
@@ -3991,10 +3992,10 @@ exports.getTestimonialById = async (req, res) => {
         if (!testimonial) {
             return res.status(404).json({ message: "Testimonial not found" });
         }
-        res.status(200).json({ status: 200, data: testimonial });
+        return res.status(200).json({ status: 200, data: testimonial });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to retrieve testimonial" });
+        return res.status(500).json({ error: "Failed to retrieve testimonial" });
     }
 };
 
@@ -4030,10 +4031,10 @@ exports.updateTestimonial = async (req, res) => {
             return res.status(404).json({ message: "Testimonial not found", status: 404, data: {} });
         }
 
-        res.status(200).json({ status: 200, message: "Testimonial updated successfully", data: updatedTestimonial });
+        return res.status(200).json({ status: 200, message: "Testimonial updated successfully", data: updatedTestimonial });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to update testimonial" });
+        return res.status(500).json({ error: "Failed to update testimonial" });
     }
 };
 
@@ -4047,10 +4048,10 @@ exports.deleteTestimonial = async (req, res) => {
             return res.status(404).json({ message: "Testimonial not found", status: 404, data: {} });
         }
 
-        res.status(200).json({ status: 200, message: "Testimonial deleted successfully", data: {} });
+        return res.status(200).json({ status: 200, message: "Testimonial deleted successfully", data: {} });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Failed to delete testimonial" });
+        return res.status(500).json({ error: "Failed to delete testimonial" });
     }
 };
 
@@ -4521,6 +4522,60 @@ exports.deleteProximityScore = async (req, res) => {
     }
 };
 
+exports.createServiceableAreaRadius = async (req, res) => {
+    try {
+        const { transportMode, radiusInKms } = req.body;
+        const newServiceableAreaRadius = await ServiceableAreaRadius.create({ transportMode, radiusInKms });
+        return res.status(201).json({ status: 201, message: 'Serviceable area radius created successfully', data: newServiceableAreaRadius });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.getAllServiceableAreaRadius = async (req, res) => {
+    try {
+        const allServiceableAreaRadius = await ServiceableAreaRadius.find();
+        return res.status(200).json({ status: 200, message: 'Success', data: allServiceableAreaRadius });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.getServiceableAreaRadiusById = async (req, res) => {
+    try {
+        const serviceableAreaRadius = await ServiceableAreaRadius.findById(req.params.id);
+        if (!serviceableAreaRadius) {
+            return res.status(404).json({ status: 404, message: 'Serviceable area radius not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Success', data: serviceableAreaRadius });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.updateServiceableAreaRadius = async (req, res) => {
+    try {
+        const updatedServiceableAreaRadius = await ServiceableAreaRadius.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!updatedServiceableAreaRadius) {
+            return res.status(404).json({ status: 404, message: 'Serviceable area radius not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Serviceable area radius updated successfully', data: updatedServiceableAreaRadius });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
+
+exports.deleteServiceableAreaRadius = async (req, res) => {
+    try {
+        const deletedServiceableAreaRadius = await ServiceableAreaRadius.findByIdAndDelete(req.params.id);
+        if (!deletedServiceableAreaRadius) {
+            return res.status(404).json({ status: 404, message: 'Serviceable area radius not found' });
+        }
+        return res.status(200).json({ status: 200, message: 'Serviceable area radius deleted successfully', data: deletedServiceableAreaRadius });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Internal server error', error: error.message });
+    }
+};
 
 
 

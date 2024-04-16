@@ -50,7 +50,7 @@ const packageSchema = new Schema({
     selectedCount: { type: Number, default: 0 },
     selected: { type: Boolean, default: false },
     type: { type: String, enum: ['Package'] },
-    packageType: { type: String, enum: ['Basic', 'Elite'] },
+    packageType: { type: String, enum: ['Essential', 'Standard', 'Pro'] },
     status: { type: Boolean, default: false },
 }, { timestamps: true });
 
