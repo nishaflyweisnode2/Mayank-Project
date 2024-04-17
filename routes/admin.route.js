@@ -172,6 +172,11 @@ module.exports = (app) => {
         app.get('/api/v1/admin/serviceableArea/:id', [authJwt.verifyToken], auth.getServiceableAreaRadiusById);
         app.put('/api/v1/admin/serviceableArea/:id', [authJwt.verifyToken], auth.updateServiceableAreaRadius);
         app.delete('/api/v1/admin/serviceableArea/:id', [authJwt.verifyToken], auth.deleteServiceableAreaRadius);
+        app.post('/api/v1/admin/experience-scores', [authJwt.verifyToken], auth.createExperienceScore);
+        app.get('/api/v1/admin/experience-scores', [authJwt.verifyToken], auth.getAllExperienceScores);
+        app.get('/api/v1/admin/experience-scores/:id', [authJwt.verifyToken], auth.getExperienceScoreById);
+        app.put('/api/v1/admin/experience-scores/:id', [authJwt.verifyToken], auth.updateExperienceScore);
+        app.delete('/api/v1/admin/experience-scores/:id', [authJwt.verifyToken], auth.deleteExperienceScore);
 
 
 

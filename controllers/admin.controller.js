@@ -43,6 +43,7 @@ const BreedAggressiveScore = require('../models/breedAggresiveScoreModel');
 const TransportScore = require('../models/transportScoreModel');
 const ProximityScore = require('../models/proximityScoreModel');
 const ServiceableAreaRadius = require('../models/serviceableRadiusModel');
+const ExperienceScore = require('../models/experienceScoreModel');
 
 
 
@@ -4577,7 +4578,85 @@ exports.deleteServiceableAreaRadius = async (req, res) => {
     }
 };
 
+exports.createExperienceScore = async (req, res) => {
+    try {
+        const { years, yearScore, months, monthScore } = req.body;
 
+        const existingScore = await ExperienceScore.findOne({ years, months });
+        if (existingScore) {
+            return res.status(400).json({ status: 400, message: 'Experience score entry already exists' });
+        }
+
+        const newScore = await ExperienceScore.create({  years, yearScore, months, monthScore });
+
+        return res.status(201).json({ status: 201, message: 'Experience score entry created successfully', data: newScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getAllExperienceScores = async (req, res) => {
+    try {
+        const scores = await ExperienceScore.find();
+        return res.status(200).json({ status: 200, data: scores });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.getExperienceScoreById = async (req, res) => {
+    try {
+        const scoreId = req.params.id;
+        const score = await ExperienceScore.findById(scoreId);
+        if (!score) {
+            return res.status(404).json({ status: 404, message: 'Experience score entry not found' });
+        }
+        return res.status(200).json({ status: 200, data: score });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.updateExperienceScore = async (req, res) => {
+    try {
+        const scoreId = req.params.id;
+        const {  years, yearScore, months, monthScore } = req.body;
+
+        const updatedScore = await ExperienceScore.findByIdAndUpdate(
+            scoreId,
+            {  years, yearScore, months, monthScore },
+            { new: true }
+        );
+
+        if (!updatedScore) {
+            return res.status(404).json({ status: 404, message: 'Experience score entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Experience score entry updated successfully', data: updatedScore });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
+
+exports.deleteExperienceScore = async (req, res) => {
+    try {
+        const scoreId = req.params.id;
+        const deletedScore = await ExperienceScore.findByIdAndDelete(scoreId);
+
+        if (!deletedScore) {
+            return res.status(404).json({ status: 404, message: 'Experience score entry not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Experience score entry deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error' });
+    }
+};
 
 
 
