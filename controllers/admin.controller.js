@@ -2631,6 +2631,12 @@ exports.createPackage = async (req, res) => {
             preparedAddOnServices = addOnServices.map(serviceId => ({ service: serviceId }));
         }
 
+        const preparedServices = services.map(serviceId => ({
+            service: serviceId,
+            selectedCount: selectedCount || 0,
+            selected: true,
+        }));
+
         const packageData = {
             mainCategoryId: findMainCategory._id,
             categoryId: findCategory ? findCategory._id : null,
@@ -2643,8 +2649,8 @@ exports.createPackage = async (req, res) => {
             type: "Package",
             packageType,
             selected: packageType ? true : false,
-            selectedCount: packageType === "Basic" || packageType === "Elite" ? selectedCount || 0 : 0,
-            services: services.map(serviceId => ({ service: serviceId })),
+            selectedCount: packageType === "Essential" || packageType === "Standard" || packageType === "Pro" ? selectedCount || 0 : 0,
+            services: /*services.map(serviceId => ({ service: serviceId }))*/ preparedServices,
             addOnServices: preparedAddOnServices,
             status,
             validUpTo,
@@ -4587,7 +4593,7 @@ exports.createExperienceScore = async (req, res) => {
             return res.status(400).json({ status: 400, message: 'Experience score entry already exists' });
         }
 
-        const newScore = await ExperienceScore.create({  years, yearScore, months, monthScore });
+        const newScore = await ExperienceScore.create({ years, yearScore, months, monthScore });
 
         return res.status(201).json({ status: 201, message: 'Experience score entry created successfully', data: newScore });
     } catch (error) {
@@ -4623,11 +4629,11 @@ exports.getExperienceScoreById = async (req, res) => {
 exports.updateExperienceScore = async (req, res) => {
     try {
         const scoreId = req.params.id;
-        const {  years, yearScore, months, monthScore } = req.body;
+        const { years, yearScore, months, monthScore } = req.body;
 
         const updatedScore = await ExperienceScore.findByIdAndUpdate(
             scoreId,
-            {  years, yearScore, months, monthScore },
+            { years, yearScore, months, monthScore },
             { new: true }
         );
 

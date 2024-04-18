@@ -39,7 +39,9 @@ const packageSchema = new Schema({
         service: {
             type: Schema.Types.ObjectId,
             ref: "Service"
-        }
+        },
+        selectedCount1: { type: Number, default: 0 },
+        selected1: { type: Boolean, default: false },
     }],
     addOnServices: [{
         service: {
