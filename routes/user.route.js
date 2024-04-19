@@ -27,8 +27,10 @@ module.exports = (app) => {
         app.put('/api/v1/user/replyOnTicket/:id', [authJwt.verifyToken], auth.replyOnTicket);
         // app.post("/api/v1/user/Cart/addToCart", [authJwt.verifyToken], auth.addToCart);
         app.post("/api/v1/user/Cart/addToCartSingleService", [authJwt.verifyToken], auth.addToCartSingleService);
-        app.post("/api/v1/user/Cart/addToCartPackageBasic", [authJwt.verifyToken], auth.addToCartPackageBasic);
-        app.post("/api/v1/user/Cart/addToCartPackageElite", [authJwt.verifyToken], auth.addToCartPackageElite);
+        app.post("/api/v1/user/Cart/addToCartAddOnSingleService", [authJwt.verifyToken], auth.addToCartAddOnSingleService);
+        app.post("/api/v1/user/Cart/addToCartPackageEssential", [authJwt.verifyToken], auth.addToCartPackageEssential);
+        app.post("/api/v1/user/Cart/addToCartPackageStandard", [authJwt.verifyToken], auth.addToCartPackageStandard);
+        app.post("/api/v1/user/Cart/addToCartPackagePro", [authJwt.verifyToken], auth.addToCartPackagePro);
         app.post('/api/v1/user/Cart/remove-from-cart', [authJwt.verifyToken], auth.removeFromCart);
         app.post('/api/v1/user/Cart/remove-package-from-cart', [authJwt.verifyToken], auth.removePackageFromCart);
         //

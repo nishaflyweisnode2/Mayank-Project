@@ -2458,9 +2458,10 @@ exports.createPackage1 = async (req, res) => {
         return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
     }
 };
+
 exports.createPackage = async (req, res) => {
     try {
-        let { mainCategoryId, categoryId, subCategoryId, title, packageType, description, timeInMin, selectedCount, services, addOnServices, validUpTo, status, variations } = req.body;
+        let { mainCategoryId, categoryId, subCategoryId, breedId, title, packageType, description, timeInMin, services, addOnServices, validUpTo, status, variations } = req.body;
 
         const findMainCategory = await mainCategory.findById(mainCategoryId);
         if (!findMainCategory) {
@@ -2626,21 +2627,31 @@ exports.createPackage = async (req, res) => {
             };
         });
 
+        if (breedId) {
+            const findbreed = await Breed.findOne({ _id: breedId });
+            if (!findbreed) {
+                return res.status(404).json({ message: "breed Not Found", status: 404, data: {} });
+            }
+        }
+
         let preparedAddOnServices = [];
         if (addOnServices && Array.isArray(addOnServices)) {
             preparedAddOnServices = addOnServices.map(serviceId => ({ service: serviceId }));
         }
 
-        const preparedServices = services.map(serviceId => ({
+        const selectedCountArray = Array.isArray(req.body.selectedCount) ? req.body.selectedCount : [req.body.selectedCount];
+
+        const preparedServices = services.map((serviceId, index) => ({
             service: serviceId,
-            selectedCount: selectedCount || 0,
-            selected: true,
+            selectedCount: selectedCountArray[index] || 0,
+            selected: selectedCountArray[index] ? true : false,
         }));
 
         const packageData = {
             mainCategoryId: findMainCategory._id,
             categoryId: findCategory ? findCategory._id : null,
             subCategoryId: findSubCategories.map(subCategory => subCategory._id),
+            breedId,
             title,
             description,
             totalTime,
@@ -2648,8 +2659,6 @@ exports.createPackage = async (req, res) => {
             images,
             type: "Package",
             packageType,
-            selected: packageType ? true : false,
-            selectedCount: packageType === "Essential" || packageType === "Standard" || packageType === "Pro" ? selectedCount || 0 : 0,
             services: /*services.map(serviceId => ({ service: serviceId }))*/ preparedServices,
             addOnServices: preparedAddOnServices,
             status,
@@ -2943,7 +2952,7 @@ exports.removePackage = async (req, res) => {
         return res.status(200).json({ message: "Package Deleted Successfully!" });
     }
 };
-exports.updatePackage = async (req, res) => {
+exports.updatePackage1 = async (req, res) => {
     try {
         const { id } = req.params;
         let findPackage = await Package.findById(id);
@@ -3005,6 +3014,152 @@ exports.updatePackage = async (req, res) => {
         return res.status(500).json({ status: 500, message: "internal server error ", data: error.message, });
     }
 };
+exports.updatePackage = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({ message: "Package ID is required", status: 400 });
+        }
+
+        const {
+            mainCategoryId, categoryId, subCategoryId, breedId, title, packageType, description, timeInMin, services, addOnServices, validUpTo, status, variations, selectedCount
+        } = req.body;
+
+        const existingPackage = await Package.findById(id);
+        if (!existingPackage) {
+            return res.status(404).json({ message: "Package not found", status: 404 });
+        }
+
+        const findMainCategory = await mainCategory.findById(mainCategoryId);
+        if (!findMainCategory) {
+            return res.status(404).json({ message: "Main Category Not Found", status: 404 });
+        }
+
+        let findCategory = null;
+        if (categoryId) {
+            findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: categoryId });
+            if (!findCategory) {
+                return res.status(404).json({ message: "Category Not Found", status: 404 });
+            }
+        }
+
+        const findSubCategories = [];
+        if (subCategoryId && Array.isArray(subCategoryId) && subCategoryId.length > 0) {
+            const subCategories = await subCategory.find({
+                _id: { $in: subCategoryId },
+                mainCategoryId: findMainCategory._id,
+                categoryId: findCategory ? findCategory._id : null,
+            });
+            if (subCategories.length !== subCategoryId.length) {
+                return res.status(404).json({ message: "One or more Subcategories Not Found", status: 404 });
+            }
+            findSubCategories.push(...subCategories);
+        }
+
+        let totalTime = '';
+        if (!timeInMin || timeInMin <= 0) {
+            let totalServiceTimeInMin = 0;
+            for (const serviceId of services) {
+                const findService = await service.findById(serviceId);
+                if (findService) {
+                    totalServiceTimeInMin += findService.timeInMin || 0;
+                }
+            }
+            const hours = Math.floor(totalServiceTimeInMin / 60);
+            const minutes = totalServiceTimeInMin % 60;
+            totalTime = `${hours} hr ${minutes} min`;
+        } else {
+            const hours = Math.floor(timeInMin / 60);
+            const minutes = timeInMin % 60;
+            totalTime = `${hours} hr ${minutes} min`;
+        }
+
+        let images = [];
+        if (req.files) {
+            images = req.files.map(file => ({ img: file.path }));
+        }
+
+        let updatedVariations = [];
+        if (!variations || !Array.isArray(variations) || variations.length === 0) {
+            for (const serviceId of services) {
+                const findService = await service.findById(serviceId);
+
+                if (findService) {
+                    updatedVariations.push({
+                        walksPerDay: findService.walksPerDay || 0,
+                        daysPerWeek: findService.daysPerWeek || 0,
+                        MonthlyoriginalPrice: findService.MonthlyoriginalPrice || 0,
+                        MonthlydiscountPrice: findService.MonthlydiscountPrice || 0,
+                        MonthlydiscountActive: findService.MonthlydiscountActive || false,
+                        threeMonthoriginalPrice: findService.threeMonthoriginalPrice || 0,
+                        threeMonthdiscountPrice: findService.threeMonthdiscountPrice || 0,
+                        threeMonthdiscountActive: findService.threeMonthdiscountActive || false,
+                        sixMonthoriginalPrice: findService.sixMonthoriginalPrice || 0,
+                        sixMonthdiscountPrice: findService.sixMonthdiscountPrice || 0,
+                        sixMonthdiscountActive: findService.sixMonthdiscountActive || false,
+                        twelveMonthoriginalPrice: findService.twelveMonthoriginalPrice || 0,
+                        twelveMonthdiscountPrice: findService.twelveMonthdiscountPrice || 0,
+                        twelveMonthdiscountActive: findService.twelveMonthdiscountActive || false,
+                    });
+                }
+            }
+        } else {
+            updatedVariations = variations;
+        }
+
+        const variationsWithDiscounts = updatedVariations.map(variation => ({
+            ...variation,
+            Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
+            threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
+            sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
+            twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
+        }));
+
+        let preparedAddOnServices = [];
+        if (addOnServices && Array.isArray(addOnServices)) {
+            preparedAddOnServices = addOnServices.map(serviceId => ({ service: serviceId }));
+        }
+
+        const selectedCountArray = Array.isArray(selectedCount) ? selectedCount : [selectedCount];
+        const preparedServices = services.map((serviceId, index) => ({
+            service: serviceId,
+            selectedCount: selectedCountArray[index] || 0,
+            selected: selectedCountArray[index] > 0,
+        }));
+
+        existingPackage.mainCategoryId = findMainCategory._id;
+        existingPackage.categoryId = findCategory ? findCategory._id : null;
+        existingPackage.subCategoryId = findSubCategories.map(subCategory => subCategory._id);
+        existingPackage.breedId = breedId;
+        existingPackage.title = title;
+        existingPackage.description = description;
+        existingPackage.totalTime = totalTime;
+        existingPackage.images = images;
+        existingPackage.packageType = packageType;
+        existingPackage.services = preparedServices;
+        existingPackage.addOnServices = preparedAddOnServices;
+        existingPackage.validUpTo = validUpTo;
+        existingPackage.status = status;
+        existingPackage.variations = variationsWithDiscounts;
+
+        const updatedPackage = await existingPackage.save();
+
+        return res.status(200).json({ message: "Package updated successfully", status: 200, data: updatedPackage });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Internal server error", status: 500 });
+    }
+};
+function calculateDiscount(originalPrice, discountPrice) {
+    if (originalPrice && discountPrice) {
+        let discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+        discount = Math.max(discount, 0);
+        discount = Math.round(discount);
+        return discount;
+    }
+    return 0;
+}
 exports.updateImagesinPackage = async (req, res) => {
     const { id } = req.params;
     let findPackage = await Package.findById({ _id: id });

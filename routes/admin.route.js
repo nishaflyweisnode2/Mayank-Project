@@ -93,7 +93,7 @@ module.exports = (app) => {
         app.get("/api/v1/admin/Package/getAllService", [authJwt.verifyToken], auth.getAllPackage);
         app.get('/api/v1/admin/Package/:id', [authJwt.verifyToken], auth.getPackageById);
         app.delete("/api/v1/admin/Package/delete/:id", [authJwt.verifyToken], auth.removePackage);
-        app.put("/api/v1/admin/Package/update/:id", [authJwt.verifyToken], auth.updatePackage);
+        app.put("/api/v1/admin/Package/update/:id", [authJwt.verifyToken], serviceUpload.array('image'), auth.updatePackage);
         app.put("/api/v1/admin/Package/uploadService/:id", [authJwt.verifyToken], serviceUpload.array('image'), auth.updateImagesinPackage);
         app.post("/api/v1/admin/Offer/addOffer", [authJwt.verifyToken], offerUpload.single('image'), auth.addOffer);
         app.get("/api/v1/admin/Offer/listOffer", [authJwt.verifyToken], auth.listOffer);

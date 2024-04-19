@@ -1922,6 +1922,140 @@ exports.addToCartSingleService = async (req, res) => {
         }
 };
 
+exports.addToCartAddOnSingleService = async (req, res) => {
+        try {
+                const userData = await User.findOne({ _id: req.user._id });
+                // console.log("userdata", userData);
+                if (!userData || !userData.city /*|| !userData.sector*/) {
+                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                }
+
+                const findPet = await Pet.findOne({ user: userData._id });
+                const findCart = await Cart.findOne({ userId: userData._id });
+                const findService = await service.findById({ _id: req.body._id, isAddOnServices: true });
+                // console.log("findPet", findPet);
+                console.log("findService", findService);
+                console.log("findService.variations.MonthlyoriginalPrice", findService.variations.MonthlyoriginalPrice);
+
+                if (!findService) {
+                        return res.status(404).json({ status: 404, message: "Service not found" });
+                }
+
+                let originalPrice = 0;
+                let discountActive = false;
+                let discountPrice = 0;
+                let discount = 0;
+
+                if (findService.variations && findService.variations.length > 0) {
+                        const variation = findService.variations[0];
+
+                        originalPrice = variation.MonthlyoriginalPrice || 0;
+                        discountActive = variation.MonthlydiscountActive || false;
+                        discountPrice = variation.MonthlydiscountPrice || 0;
+                }
+
+                if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                        discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                        console.log("originalPrice", originalPrice);
+                        console.log("discountPrice", discountPrice);
+                        console.log("discountActive", discountActive);
+                }
+
+                let Charged = [];
+                let paidAmount = 0;
+                let totalAmount = 0;
+                let additionalFee = 0;
+
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                if (findService.type == "Service") {
+                        let price = discountActive ? discountPrice : originalPrice || 0;
+                        let quantity = req.body.quantity;
+
+                        if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                                return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                        }
+
+                        totalAmount = Number((price * quantity).toFixed(2));
+                        paidAmount = Number((totalAmount + additionalFee).toFixed(2));
+
+                        if (isNaN(totalAmount) || isNaN(paidAmount)) {
+                                return res.status(500).json({ status: 500, message: "Invalid total or paidAmount values." });
+                        }
+
+                        if (findCart) {
+                                const existingService = findCart.addOnServices.find(service => service.serviceId.equals(findService._id));
+
+                                if (existingService) {
+                                        existingService.quantity += quantity;
+                                        existingService.total = price * existingService.quantity;
+                                        findCart.totalAmount += price * quantity;
+                                        findCart.paidAmount += price * quantity;
+                                        await findCart.save();
+                                        return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                                }
+                        }
+
+                        let obj = {
+                                userId: userData._id,
+                                Charges: Charged,
+                                addOnServices: [{
+                                        serviceId: findService._id,
+                                        serviceType: findService.serviceType,
+                                        packageServices: req.body.packageServices,
+                                        price: price,
+                                        quantity: quantity,
+                                        total: totalAmount,
+                                        type: "Service",
+                                }],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                breed: findPet.breed,
+                                age: findPet.age,
+                        };
+
+                        if (findCart) {
+                                findCart.addOnServices.push(obj.addOnServices[0]);
+                                findCart.totalAmount += obj.totalAmount;
+                                findCart.paidAmount += obj.totalAmount;
+                                findCart.totalItem++;
+                                await findCart.save();
+                                return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                        } else {
+                                const Data = await Cart.create(obj);
+                                return res.status(200).json({ status: 200, message: "Service successfully added to the cart.", data: Data });
+                        }
+                }
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
+
 exports.addToCartPackageNormal1 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -2058,59 +2192,106 @@ exports.addToCartPackageNormal1 = async (req, res) => {
         }
 };
 
-exports.addToCartPackageBasic = async (req, res) => {
+exports.addToCartPackageEssential = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
-                if (!userData) {
-                        return res.status(404).send({ status: 404, message: "User not found" });
-                }
-
-                if (!userData.city || !userData.sector) {
+                // console.log("userdata", userData);
+                if (!userData || !userData.city /*|| !userData.sector*/) {
                         return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
                 }
 
+                const findPet = await Pet.findOne({ user: userData._id });
                 const findCart = await Cart.findOne({ userId: userData._id });
-                const findPackage = req.body.packageId ? await Package.findOne({ _id: req.body.packageId, packageType: "Basic" }).populate('services.service').populate('addOnServices.service') : null;
+                const findService = await service.findById({ _id: req.body._id, isAddOnServices: true });
+                // console.log("findPet", findPet);
+                console.log("findService", findService);
+                console.log("findService.variations.MonthlyoriginalPrice", findService.variations.MonthlyoriginalPrice);
 
-                if (!findPackage) {
-                        return res.status(404).json({ status: 404, message: "Package not found" });
+                if (!findService) {
+                        return res.status(404).json({ status: 404, message: "Service not found" });
                 }
 
-                if (findCart) {
-                        const existingPackage = findCart.packages.find(pkg => pkg.packageId.equals(findPackage._id));
+                let originalPrice = 0;
+                let discountActive = false;
+                let discountPrice = 0;
+                let discount = 0;
 
-                        if (req.body.quantity <= 0) {
-                                return res.status(400).json({ status: 400, message: "Quantity must be greater than 0." });
+                if (findService.variations && findService.variations.length > 0) {
+                        const variation = findService.variations[0];
+
+                        originalPrice = variation.MonthlyoriginalPrice || 0;
+                        discountActive = variation.MonthlydiscountActive || false;
+                        discountPrice = variation.MonthlydiscountPrice || 0;
+                }
+
+                if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                        discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                        console.log("originalPrice", originalPrice);
+                        console.log("discountPrice", discountPrice);
+                        console.log("discountActive", discountActive);
+                }
+
+                let Charged = [];
+                let paidAmount = 0;
+                let totalAmount = 0;
+                let additionalFee = 0;
+
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                if (findService.type == "Service") {
+                        let price = discountActive ? discountPrice : originalPrice || 0;
+                        let quantity = req.body.quantity;
+
+                        if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                                return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
                         }
 
-                        if (existingPackage) {
-                                existingPackage.quantity += req.body.quantity;
-                                existingPackage.total = existingPackage.price * existingPackage.quantity;
-                                findCart.totalAmount += existingPackage.price * req.body.quantity;
-                                findCart.paidAmount += existingPackage.price * req.body.quantity;
-                                await findCart.save();
-                                return res.status(200).json({ status: 200, message: "Package quantity updated in the cart.", data: findCart });
-                        } else {
-                                let price;
+                        totalAmount = Number((price * quantity).toFixed(2));
+                        paidAmount = Number((totalAmount + additionalFee).toFixed(2));
 
-                                if (findPackage.location && findPackage.location.length > 0) {
-                                        const packageLocation = findPackage.location.find(loc =>
-                                                loc.city.toString() === userData.city.toString() &&
-                                                loc.sector.toString() === userData.sector.toString()
-                                        );
+                        if (isNaN(totalAmount) || isNaN(paidAmount)) {
+                                return res.status(500).json({ status: 500, message: "Invalid total or paidAmount values." });
+                        }
 
-                                        if (packageLocation && packageLocation.discountActive) {
-                                                price = packageLocation.discountPrice;
-                                        } else if (packageLocation) {
-                                                price = packageLocation.originalPrice;
-                                        } else {
-                                                price = calculateNormalPackagePrice(findPackage, userData.city, userData.sector);
-                                        }
-                                } else {
-                                        price = calculateNormalPackagePrice(findPackage, userData.city, userData.sector);
+                        if (findCart) {
+                                const existingService = findCart.packages.find(service => service.serviceId.equals(findService._id));
+
+                                if (existingService) {
+                                        existingService.quantity += quantity;
+                                        existingService.total = price * existingService.quantity;
+                                        findCart.totalAmount += price * quantity;
+                                        findCart.paidAmount += price * quantity;
+                                        await findCart.save();
+                                        return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
                                 }
+                        }
 
-                                const newPackage = {
+                        let obj = {
+                                userId: userData._id,
+                                Charges: Charged,
+                                packages: [{
                                         packageId: findPackage._id,
                                         packageType: "Normal",
                                         services: findPackage.services.map(service => ({
@@ -2121,115 +2302,28 @@ exports.addToCartPackageBasic = async (req, res) => {
                                                 discountPrice: getServicePrice(service.service, userData.city, userData.sector).discountPrice,
                                                 discount: getServicePrice(service.service, userData.city, userData.sector).discount,
                                                 discountActive: getServicePrice(service.service, userData.city, userData.sector).discountActive,
-                                        })),
-                                        addOnServices: findPackage.addOnServices.map(service => ({
-                                                serviceId: service.service._id,
-                                                serviceType: service.service.serviceTypes,
-                                                quantity: service.service.quantity,
-                                                originalPrice: getServicePrice(service.service, userData.city, userData.sector).originalPrice,
-                                                discountPrice: getServicePrice(service.service, userData.city, userData.sector).discountPrice,
-                                                discount: getServicePrice(service.service, userData.city, userData.sector).discount,
-                                                discountActive: getServicePrice(service.service, userData.city, userData.sector).discountActive,
-                                        })),
-                                        price: price,
-                                        quantity: req.body.quantity,
-                                        total: price * req.body.quantity,
-                                };
 
-                                findCart.packages.push(newPackage);
-                                findCart.totalAmount += newPackage.total;
-                                findCart.paidAmount += newPackage.total;
+                                        })),
+                                }],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                breed: findPet.breed,
+                                age: findPet.age,
+                        };
+
+                        if (findCart) {
+                                findCart.addOnServices.push(obj.addOnServices[0]);
+                                findCart.totalAmount += obj.totalAmount;
+                                findCart.paidAmount += obj.totalAmount;
                                 findCart.totalItem++;
                                 await findCart.save();
-                                return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
-                        }
-                } else {
-                        let Charged = [];
-                        let paidAmount = 0;
-                        let totalAmount = 0;
-                        let additionalFee = 0;
-
-                        const findCharge = await Charges.find({});
-
-                        if (findCharge.length > 0) {
-                                for (let i = 0; i < findCharge.length; i++) {
-                                        let obj1 = {
-                                                chargeId: findCharge[i]._id,
-                                                charge: findCharge[i].charge,
-                                                discountCharge: findCharge[i].discountCharge,
-                                                discount: findCharge[i].discount,
-                                                cancelation: findCharge[i].cancelation,
-                                        };
-                                        if (findCharge[i].cancelation == false) {
-                                                if (findCharge[i].discount == true) {
-                                                        additionalFee = additionalFee + findCharge[i].discountCharge;
-                                                } else {
-                                                        additionalFee = additionalFee + findCharge[i].charge;
-                                                }
-                                        }
-                                        Charged.push(obj1);
-                                }
-                        }
-
-                        if (findPackage.type == "Package") {
-                                let price;
-
-                                if (findPackage.location && findPackage.location.length > 0) {
-                                        const packageLocation = findPackage.location.find(loc =>
-                                                loc.city.toString() === userData.city.toString() &&
-                                                loc.sector.toString() === userData.sector.toString()
-                                        );
-
-                                        if (packageLocation && packageLocation.discountActive) {
-                                                price = packageLocation.discountPrice;
-                                        } else if (packageLocation) {
-                                                price = packageLocation.originalPrice;
-                                        }
-                                }
-
-                                if (price === undefined) {
-                                        price = calculateNormalPackagePrice(findPackage, userData.city, userData.sector);
-                                }
-
-                                totalAmount = Number(price * req.body.quantity).toFixed(2);
-                                paidAmount = Number((price * req.body.quantity).toFixed(2)) + Number(additionalFee);
-
-                                const obj = {
-                                        userId: userData._id,
-                                        Charges: Charged,
-                                        packages: [
-                                                {
-                                                        packageId: findPackage._id,
-                                                        packageType: "Basic",
-                                                        services: findPackage.services.map(service => ({
-                                                                serviceId: service.service._id,
-                                                                serviceType: service.service.serviceTypes,
-                                                                originalPrice: getServicePrice(service.service, userData.city, userData.sector).originalPrice,
-                                                                discountPrice: getServicePrice(service.service, userData.city, userData.sector).discountPrice,
-                                                                discountActive: getServicePrice(service.service, userData.city, userData.sector).discountActive,
-                                                        })),
-                                                        addOnServices: findPackage.addOnServices.map(service => ({
-                                                                serviceId: service.service._id,
-                                                                serviceType: service.service.serviceTypes,
-                                                                originalPrice: getServicePrice(service.service, userData.city, userData.sector).originalPrice,
-                                                                discountPrice: getServicePrice(service.service, userData.city, userData.sector).discountPrice,
-                                                                discountActive: getServicePrice(service.service, userData.city, userData.sector).discountActive,
-                                                        })),
-                                                        price: price,
-                                                        quantity: req.body.quantity,
-                                                        total: price * req.body.quantity,
-                                                },
-                                        ],
-                                        totalAmount: totalAmount,
-                                        additionalFee: additionalFee,
-                                        paidAmount: paidAmount,
-                                        totalItem: 1,
-                                };
-
+                                return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                        } else {
                                 const Data = await Cart.create(obj);
-                                return res.status(200).json({ status: 200, message: "Package successfully added to cart.", data: Data });
+                                return res.status(200).json({ status: 200, message: "Service successfully added to the cart.", data: Data });
                         }
-
                 }
         } catch (error) {
                 console.error(error);
@@ -2258,7 +2352,7 @@ function calculateNormalPackagePrice(packageData, userCity, userSector) {
         return totalOriginalPrice;
 }
 
-exports.addToCartPackageElite = async (req, res) => {
+exports.addToCartPackageStandard = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
                 if (!userData) {
@@ -2270,7 +2364,7 @@ exports.addToCartPackageElite = async (req, res) => {
                 }
 
                 const findCart = await Cart.findOne({ userId: userData._id });
-                const findPackage = req.body.packageId ? await Package.findOne({ _id: req.body.packageId, packageType: "Elite" }).populate('services.service').populate('addOnServices.service') : null;
+                const findPackage = req.body.packageId ? await Package.findOne({ _id: req.body.packageId, packageType: "Standard" }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage) {
                         return res.status(404).json({ status: 404, message: "Package not found" });
@@ -2311,7 +2405,7 @@ exports.addToCartPackageElite = async (req, res) => {
                                 }
                                 const newPackage = {
                                         packageId: findPackage._id,
-                                        packageType: "Customize",
+                                        packageType: "Standard",
                                         services: findPackage.services.map(service => ({
                                                 serviceId: service.service._id,
                                                 serviceType: service.service.serviceTypes,
@@ -2397,7 +2491,7 @@ exports.addToCartPackageElite = async (req, res) => {
                                         packages: [
                                                 {
                                                         packageId: findPackage._id,
-                                                        packageType: "Customize",
+                                                        packageType: "Standard",
                                                         services: findPackage.services.map(service => ({
                                                                 serviceId: service.service._id,
                                                                 serviceType: service.service.serviceTypes,
@@ -2454,20 +2548,184 @@ function calculateCustomizePackagePrice(packageData, userCity, userSector) {
         return totalOriginalPrice;
 }
 
-function getServicePrice(service, userCity, userSector) {
-        const location = service.location.find(location =>
-                location.city.toString() === userCity.toString() &&
-                location.sector.toString() === userSector.toString()
-        );
-        return {
-                originalPrice: location ? location.originalPrice || 0 : service.originalPrice || 0,
-                discountPrice: location ? location.discountPrice || 0 : service.discountPrice || 0,
-                discount: location ? location.discount || 0 : service.discount || 0,
-                discountActive: location ? location.discountActive || false : service.discountActive || false,
+exports.addToCartPackagePro = async (req, res) => {
+        try {
+                const userData = await User.findOne({ _id: req.user._id });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
 
+                if (!userData.city /*|| !userData.sector*/) {
+                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                }
+
+                const findCart = await Cart.findOne({ userId: userData._id });
+                const findPackage = req.body.packageId ? await Package.findOne({ _id: req.body.packageId, packageType: "Pro" }).populate('services.service').populate('addOnServices.service') : null;
+
+                if (!findPackage) {
+                        return res.status(404).json({ status: 404, message: "Package not found" });
+                }
+
+                if (findCart) {
+                        const existingPackage = findCart.packages.find(pkg => pkg.packageId.equals(findPackage._id));
+
+                        if (req.body.quantity <= 0) {
+                                return res.status(400).json({ status: 400, message: "Quantity must be greater than 0." });
+                        }
+
+                        if (existingPackage) {
+                                existingPackage.quantity += req.body.quantity;
+                                existingPackage.total = existingPackage.price * existingPackage.quantity;
+                                findCart.totalAmount += existingPackage.price * req.body.quantity;
+                                findCart.paidAmount += existingPackage.price * req.body.quantity;
+                                await findCart.save();
+                                return res.status(200).json({ status: 200, message: "Package quantity updated in the cart.", data: findCart });
+                        } else {
+                                let price;
+
+                                if (findPackage.location && findPackage.location.length > 0) {
+                                        const packageLocation = findPackage.location.find(loc =>
+                                                loc.city.toString() === userData.city.toString() &&
+                                                loc.sector.toString() === userData.sector.toString()
+                                        );
+
+                                        if (packageLocation && packageLocation.discountActive) {
+                                                price = packageLocation.discountPrice;
+                                        } else if (packageLocation) {
+                                                price = packageLocation.originalPrice;
+                                        } else {
+                                                price = calculateNormalPackagePrice(findPackage, userData.city, userData.sector);
+                                        }
+                                } else {
+                                        price = calculateNormalPackagePrice(findPackage, userData.city, userData.sector);
+                                }
+
+                                const newPackage = {
+                                        packageId: findPackage._id,
+                                        packageType: "Pro",
+                                        services: findPackage.services.map(service => ({
+                                                serviceId: service.service._id,
+                                                serviceType: service.service.serviceTypes,
+                                                quantity: service.service.quantity,
+                                                originalPrice: getServicePrice(service.service, userData.city, userData.sector).originalPrice,
+                                                discountPrice: getServicePrice(service.service, userData.city, userData.sector).discountPrice,
+                                                discount: getServicePrice(service.service, userData.city, userData.sector).discount,
+                                                discountActive: getServicePrice(service.service, userData.city, userData.sector).discountActive,
+                                        })),
+                                        addOnServices: findPackage.addOnServices.map(service => ({
+                                                serviceId: service.service._id,
+                                                serviceType: service.service.serviceTypes,
+                                                quantity: service.service.quantity,
+                                                originalPrice: getServicePrice(service.service, userData.city, userData.sector).originalPrice,
+                                                discountPrice: getServicePrice(service.service, userData.city, userData.sector).discountPrice,
+                                                discount: getServicePrice(service.service, userData.city, userData.sector).discount,
+                                                discountActive: getServicePrice(service.service, userData.city, userData.sector).discountActive,
+                                        })),
+                                        price: price,
+                                        quantity: req.body.quantity,
+                                        total: price * req.body.quantity,
+                                };
+
+                                findCart.packages.push(newPackage);
+                                findCart.totalAmount += newPackage.total;
+                                findCart.paidAmount += newPackage.total;
+                                findCart.totalItem++;
+                                await findCart.save();
+                                return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
+                        }
+                } else {
+                        let Charged = [];
+                        let paidAmount = 0;
+                        let totalAmount = 0;
+                        let additionalFee = 0;
+
+                        const findCharge = await Charges.find({});
+
+                        if (findCharge.length > 0) {
+                                for (let i = 0; i < findCharge.length; i++) {
+                                        let obj1 = {
+                                                chargeId: findCharge[i]._id,
+                                                charge: findCharge[i].charge,
+                                                discountCharge: findCharge[i].discountCharge,
+                                                discount: findCharge[i].discount,
+                                                cancelation: findCharge[i].cancelation,
+                                        };
+                                        if (findCharge[i].cancelation == false) {
+                                                if (findCharge[i].discount == true) {
+                                                        additionalFee = additionalFee + findCharge[i].discountCharge;
+                                                } else {
+                                                        additionalFee = additionalFee + findCharge[i].charge;
+                                                }
+                                        }
+                                        Charged.push(obj1);
+                                }
+                        }
+
+                        if (findPackage.type == "Package") {
+                                let price;
+
+                                if (findPackage.location && findPackage.location.length > 0) {
+                                        const packageLocation = findPackage.location.find(loc =>
+                                                loc.city.toString() === userData.city.toString() &&
+                                                loc.sector.toString() === userData.sector.toString()
+                                        );
+
+                                        if (packageLocation && packageLocation.discountActive) {
+                                                price = packageLocation.discountPrice;
+                                        } else if (packageLocation) {
+                                                price = packageLocation.originalPrice;
+                                        }
+                                }
+
+                                if (price === undefined) {
+                                        price = calculateNormalPackagePrice(findPackage, userData.city, userData.sector);
+                                }
+
+                                totalAmount = Number(price * req.body.quantity).toFixed(2);
+                                paidAmount = Number((price * req.body.quantity).toFixed(2)) + Number(additionalFee);
+
+                                const obj = {
+                                        userId: userData._id,
+                                        Charges: Charged,
+                                        packages: [
+                                                {
+                                                        packageId: findPackage._id,
+                                                        packageType: "Pro",
+                                                        services: findPackage.services.map(service => ({
+                                                                serviceId: service.service._id,
+                                                                serviceType: service.service.serviceTypes,
+                                                                originalPrice: getServicePrice(service.service, userData.city, userData.sector).originalPrice,
+                                                                discountPrice: getServicePrice(service.service, userData.city, userData.sector).discountPrice,
+                                                                discountActive: getServicePrice(service.service, userData.city, userData.sector).discountActive,
+                                                        })),
+                                                        addOnServices: findPackage.addOnServices.map(service => ({
+                                                                serviceId: service.service._id,
+                                                                serviceType: service.service.serviceTypes,
+                                                                originalPrice: getServicePrice(service.service, userData.city, userData.sector).originalPrice,
+                                                                discountPrice: getServicePrice(service.service, userData.city, userData.sector).discountPrice,
+                                                                discountActive: getServicePrice(service.service, userData.city, userData.sector).discountActive,
+                                                        })),
+                                                        price: price,
+                                                        quantity: req.body.quantity,
+                                                        total: price * req.body.quantity,
+                                                },
+                                        ],
+                                        totalAmount: totalAmount,
+                                        additionalFee: additionalFee,
+                                        paidAmount: paidAmount,
+                                        totalItem: 1,
+                                };
+
+                                const Data = await Cart.create(obj);
+                                return res.status(200).json({ status: 200, message: "Package successfully added to cart.", data: Data });
+                        }
+
+                }
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
-}
-
+};
 
 exports.removeFromCart = async (req, res) => {
         try {

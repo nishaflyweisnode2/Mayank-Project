@@ -131,6 +131,24 @@ const CartSchema = new Schema({
                         },
                 },
         ],
+        addOnServices: [{
+                serviceId: {
+                        type: Schema.Types.ObjectId,
+                        ref: 'Service',
+                },
+                price: {
+                        type: Number,
+                },
+                quantity: {
+                        type: Number,
+                        default: 1,
+                },
+                total: {
+                        type: Number,
+                        default: 0,
+                },
+
+        }],
         packages: [
                 {
                         packageId: {
@@ -139,13 +157,15 @@ const CartSchema = new Schema({
                         },
                         packageType: {
                                 type: String,
-                                enum: ['Basic', 'Elite']
+                                enum: ['Essential', 'Standard', 'Pro']
                         },
                         services: [{
                                 serviceId: {
                                         type: Schema.Types.ObjectId,
                                         ref: 'Service',
                                 },
+                                selectedCount: { type: Number, default: 0 },
+                                selected: { type: Boolean, default: false },
                                 quantity: {
                                         type: Number,
                                         default: 1,
@@ -155,24 +175,6 @@ const CartSchema = new Schema({
                                 discount: { type: Number },
                                 discountPrice: { type: Number },
                                 totalPrice: { type: Number },
-                                selected: { type: Boolean, default: false },
-                        }],
-                        addOnServices: [{
-                                serviceId: {
-                                        type: Schema.Types.ObjectId,
-                                        ref: 'Service',
-                                },
-                                quantity: {
-                                        type: Number,
-                                        default: 1,
-                                },
-                                originalPrice: { type: Number },
-                                discountActive: { type: Boolean, default: false },
-                                discount: { type: Number },
-                                discountPrice: { type: Number },
-                                totalPrice: { type: Number },
-                                selected: { type: Boolean, default: false },
-
                         }],
                         price: {
                                 type: Number,

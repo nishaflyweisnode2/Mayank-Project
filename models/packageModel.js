@@ -7,6 +7,7 @@ const packageSchema = new Schema({
     mainCategoryId: { type: Schema.Types.ObjectId, ref: 'mainCategory' },
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category' },
     subCategoryId: [{ type: Schema.Types.ObjectId, ref: 'subCategory' }],
+    breedId: { type: Schema.Types.ObjectId, ref: 'Breed' },
     title: { type: String },
     description: { type: String },
     timeInMin: { type: Number },
@@ -40,8 +41,8 @@ const packageSchema = new Schema({
             type: Schema.Types.ObjectId,
             ref: "Service"
         },
-        selectedCount1: { type: Number, default: 0 },
-        selected1: { type: Boolean, default: false },
+        selectedCount: { type: Number, default: 0 },
+        selected: { type: Boolean, default: false },
     }],
     addOnServices: [{
         service: {
@@ -49,8 +50,6 @@ const packageSchema = new Schema({
             ref: "Service"
         }
     }],
-    selectedCount: { type: Number, default: 0 },
-    selected: { type: Boolean, default: false },
     type: { type: String, enum: ['Package'] },
     packageType: { type: String, enum: ['Essential', 'Standard', 'Pro'] },
     status: { type: Boolean, default: false },
