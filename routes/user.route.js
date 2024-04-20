@@ -31,7 +31,8 @@ module.exports = (app) => {
         app.post("/api/v1/user/Cart/addToCartPackageEssential", [authJwt.verifyToken], auth.addToCartPackageEssential);
         app.post("/api/v1/user/Cart/addToCartPackageStandard", [authJwt.verifyToken], auth.addToCartPackageStandard);
         app.post("/api/v1/user/Cart/addToCartPackagePro", [authJwt.verifyToken], auth.addToCartPackagePro);
-        app.post('/api/v1/user/Cart/remove-from-cart', [authJwt.verifyToken], auth.removeFromCart);
+        app.post('/api/v1/user/Cart/remove-service-from-cart', [authJwt.verifyToken], auth.removeServiceFromCart);
+        app.post('/api/v1/user/Cart/remove-addonservice-from-cart', [authJwt.verifyToken], auth.removeAddOnServiceFromCart);
         app.post('/api/v1/user/Cart/remove-package-from-cart', [authJwt.verifyToken], auth.removePackageFromCart);
         //
         app.post('/api/v1/user/Cart/add-service', [authJwt.verifyToken], auth.addServiceToCart);

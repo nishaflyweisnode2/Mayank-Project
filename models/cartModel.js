@@ -170,11 +170,6 @@ const CartSchema = new Schema({
                                         type: Number,
                                         default: 1,
                                 },
-                                originalPrice: { type: Number },
-                                discountActive: { type: Boolean, default: false },
-                                discount: { type: Number },
-                                discountPrice: { type: Number },
-                                totalPrice: { type: Number },
                         }],
                         price: {
                                 type: Number,
@@ -203,6 +198,7 @@ const CartSchema = new Schema({
         },
         totalItem: {
                 type: Number,
+                default: 0
         },
         breed: {
                 type: Schema.Types.ObjectId,

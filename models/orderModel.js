@@ -129,10 +129,6 @@ const DocumentSchema = Schema({
                                 type: Schema.Types.ObjectId,
                                 ref: 'Service',
                         },
-                        serviceType: {
-                                type: Schema.Types.ObjectId,
-                                ref: 'ServiceType',
-                        },
                         price: {
                                 type: Number,
                         },
@@ -146,6 +142,24 @@ const DocumentSchema = Schema({
                         },
                 },
         ],
+        addOnServices: [{
+                serviceId: {
+                        type: Schema.Types.ObjectId,
+                        ref: 'Service',
+                },
+                price: {
+                        type: Number,
+                },
+                quantity: {
+                        type: Number,
+                        default: 1,
+                },
+                total: {
+                        type: Number,
+                        default: 0,
+                },
+
+        }],
         packages: [
                 {
                         packageId: {
@@ -154,48 +168,19 @@ const DocumentSchema = Schema({
                         },
                         packageType: {
                                 type: String,
-                                enum: ['Customize', 'Normal', 'Edit']
+                                enum: ['Essential', 'Standard', 'Pro']
                         },
                         services: [{
                                 serviceId: {
                                         type: Schema.Types.ObjectId,
                                         ref: 'Service',
                                 },
-                                serviceType: {
-                                        type: Schema.Types.ObjectId,
-                                        ref: 'ServiceType',
-                                },
+                                selectedCount: { type: Number, default: 0 },
+                                selected: { type: Boolean, default: false },
                                 quantity: {
                                         type: Number,
                                         default: 1,
                                 },
-                                originalPrice: { type: Number },
-                                discountActive: { type: Boolean, default: false },
-                                discount: { type: Number },
-                                discountPrice: { type: Number },
-                                totalPrice: { type: Number },
-                                selected: { type: Boolean, default: false },
-                        }],
-                        addOnServices: [{
-                                serviceId: {
-                                        type: Schema.Types.ObjectId,
-                                        ref: 'Service',
-                                },
-                                serviceType: {
-                                        type: Schema.Types.ObjectId,
-                                        ref: 'ServiceType',
-                                },
-                                quantity: {
-                                        type: Number,
-                                        default: 1,
-                                },
-                                originalPrice: { type: Number },
-                                discountActive: { type: Boolean, default: false },
-                                discount: { type: Number },
-                                discountPrice: { type: Number },
-                                totalPrice: { type: Number },
-                                selected: { type: Boolean, default: false },
-
                         }],
                         price: {
                                 type: Number,
@@ -244,6 +229,14 @@ const DocumentSchema = Schema({
                 type: String,
                 enum: ["Pending", "Paid", "Failed"],
                 default: "Pending"
+        },
+        breed: {
+                type: Schema.Types.ObjectId,
+                ref: 'Breed',
+        },
+        pets: {
+                type: Schema.Types.ObjectId,
+                ref: 'Pets',
         },
 }, { timestamps: true })
 module.exports = mongoose.model("order", DocumentSchema);
