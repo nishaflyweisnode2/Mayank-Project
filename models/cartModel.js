@@ -157,7 +157,7 @@ const CartSchema = new Schema({
                         },
                         packageType: {
                                 type: String,
-                                enum: ['Essential', 'Standard', 'Pro']
+                                enum: ['Multi-Pack', 'Essential', 'Standard', 'Pro']
                         },
                         services: [{
                                 serviceId: {

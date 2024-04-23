@@ -177,7 +177,11 @@ module.exports = (app) => {
         app.get('/api/v1/admin/experience-scores/:id', [authJwt.verifyToken], auth.getExperienceScoreById);
         app.put('/api/v1/admin/experience-scores/:id', [authJwt.verifyToken], auth.updateExperienceScore);
         app.delete('/api/v1/admin/experience-scores/:id', [authJwt.verifyToken], auth.deleteExperienceScore);
-
+        app.post('/api/v1/admin/sizes', [authJwt.verifyToken], auth.createSize);
+        app.get('/api/v1/admin/sizes', [authJwt.verifyToken], auth.getAllSizes);
+        app.get('/api/v1/admin/sizes/:id', [authJwt.verifyToken], auth.getSizeById);
+        app.put('/api/v1/admin/sizes/:id', [authJwt.verifyToken], auth.updateSizeById);
+        app.delete('/api/v1/admin/sizes/:id', [authJwt.verifyToken], auth.deleteSizeById);
 
 
 

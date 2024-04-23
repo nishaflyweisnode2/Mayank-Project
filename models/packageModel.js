@@ -15,6 +15,10 @@ const packageSchema = new Schema({
     variations: [{
         walksPerDay: { type: Number, },
         daysPerWeek: { type: Number, },
+        oneTimeoriginalPrice: { type: Number },
+        oneTimediscountActive: { type: Boolean, default: false },
+        oneTimediscount: { type: Number },
+        oneTimediscountPrice: { type: Number },
         MonthlyoriginalPrice: { type: Number },
         MonthlydiscountActive: { type: Boolean, default: false },
         Monthlydiscount: { type: Number },
@@ -51,7 +55,7 @@ const packageSchema = new Schema({
         }
     }],
     type: { type: String, enum: ['Package'] },
-    packageType: { type: String, enum: ['Essential', 'Standard', 'Pro'] },
+    packageType: { type: String, enum: ['Multi-Pack', 'Essential', 'Standard', 'Pro'] },
     status: { type: Boolean, default: false },
 }, { timestamps: true });
 

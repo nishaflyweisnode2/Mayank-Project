@@ -1530,9 +1530,9 @@ exports.addToCartSingleService = async (req, res) => {
                 if (findService.variations && findService.variations.length > 0) {
                         const variation = findService.variations[0];
 
-                        originalPrice = variation.MonthlyoriginalPrice || 0;
-                        discountActive = variation.MonthlydiscountActive || false;
-                        discountPrice = variation.MonthlydiscountPrice || 0;
+                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                        discountActive = variation.oneTimediscountActive || false;
+                        discountPrice = variation.oneTimediscountPrice || 0;
                 }
 
                 if (discountActive && originalPrice > 0 && discountPrice > 0) {
@@ -1664,9 +1664,9 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                 if (findService.variations && findService.variations.length > 0) {
                         const variation = findService.variations[0];
 
-                        originalPrice = variation.MonthlyoriginalPrice || 0;
-                        discountActive = variation.MonthlydiscountActive || false;
-                        discountPrice = variation.MonthlydiscountPrice || 0;
+                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                        discountActive = variation.oneTimediscountActive || false;
+                        discountPrice = variation.oneTimediscountPrice || 0;
                 }
 
                 if (discountActive && originalPrice > 0 && discountPrice > 0) {
@@ -2900,8 +2900,9 @@ exports.updateServiceQuantity = async (req, res) => {
                         for (const pkg of findCart.packages) {
                                 existingPackageService = pkg.services.find(service => service.serviceId.equals(packageServices));
                                 if (existingPackageService) {
+                                        const price = existingPackageService.price;
                                         existingPackageService.quantity = quantity;
-                                        existingPackageService.total = existingPackageService.price * quantity;
+                                        existingPackageService.total = price * quantity;
                                         updatedService = existingPackageService;
                                 }
                         }
@@ -3005,7 +3006,15 @@ function calculateTotalAmount21(cart) {
         if (cart.packages && cart.packages.length > 0) {
                 cart.packages.forEach((pkg) => {
                         if (pkg.services && pkg.services.length > 0) {
-                                total += pkg.services.reduce((acc, service) => acc + parseFloat(service.total), 0);
+                                pkg.services.reduce((service) => {
+                                        const serviceTotal = parseFloat(service.total);
+                                        console.log("serviceTotal", serviceTotal);
+                                        if (!isNaN(serviceTotal)) {
+                                                total += serviceTotal;
+                                        } else {
+                                                console.warn(`Invalid total value for service: ${service}`);
+                                        }
+                                });
                         }
                 });
         }

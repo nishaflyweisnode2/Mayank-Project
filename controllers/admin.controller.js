@@ -44,6 +44,7 @@ const TransportScore = require('../models/transportScoreModel');
 const ProximityScore = require('../models/proximityScoreModel');
 const ServiceableAreaRadius = require('../models/serviceableRadiusModel');
 const ExperienceScore = require('../models/experienceScoreModel');
+const Size = require('../models/sizeModel');
 
 
 
@@ -1904,6 +1905,7 @@ exports.createService = async (req, res) => {
 
             return {
                 ...variation,
+                oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
                 Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
                 threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
                 sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
@@ -2216,13 +2218,6 @@ exports.getServiceWithoutSubCategory = async (req, res) => {
 exports.getAllService = async (req, res) => {
     try {
         const findService = await service.find().populate('mainCategoryId', 'name').populate('categoryId', 'name').populate('subCategoryId', 'name')
-            .populate({
-                path: 'location.city',
-                model: 'City',
-            })/*.populate({
-                path: 'location.sector',
-                model: 'Area',
-            })*/;
 
         if (findService.length > 0) {
             return res.status(200).json({
@@ -2540,6 +2535,9 @@ exports.createPackage = async (req, res) => {
                 if (findService) {
                     let walksPerDay = 0;
                     let daysPerWeek = 0;
+                    let oneTimeoriginalPrice = 0;
+                    let oneTimediscountActive;
+                    let oneTimediscountPrice = 0;
                     let MonthlyoriginalPrice = 0;
                     let MonthlydiscountActive;
                     let MonthlydiscountPrice = 0;
@@ -2558,6 +2556,9 @@ exports.createPackage = async (req, res) => {
 
                         walksPerDay = firstVariation.walksPerDay || 0;
                         daysPerWeek = firstVariation.daysPerWeek || 0;
+                        oneTimeoriginalPrice = firstVariation.oneTimeoriginalPrice || 0;
+                        oneTimediscountActive = firstVariation.oneTimediscountActive || false;
+                        oneTimediscountPrice = firstVariation.oneTimediscountPrice || 0;
                         MonthlyoriginalPrice = firstVariation.MonthlyoriginalPrice || 0;
                         MonthlydiscountPrice = firstVariation.MonthlydiscountPrice || 0;
                         MonthlydiscountActive = firstVariation.MonthlydiscountActive || false;
@@ -2573,6 +2574,9 @@ exports.createPackage = async (req, res) => {
                     } else {
                         walksPerDay = findService.walksPerDay || 0;
                         daysPerWeek = findService.daysPerWeek || 0;
+                        oneTimeoriginalPrice = firstVariation.oneTimeoriginalPrice || 0;
+                        oneTimediscountActive = firstVariation.oneTimediscountActive || false;
+                        oneTimediscountPrice = firstVariation.oneTimediscountPrice || 0;
                         MonthlyoriginalPrice = findService.MonthlyoriginalPrice || 0;
                         MonthlydiscountPrice = findService.MonthlydiscountPrice || 0;
                         MonthlydiscountActive = findService.MonthlydiscountActive || false;
@@ -2590,6 +2594,9 @@ exports.createPackage = async (req, res) => {
                     variations.push({
                         walksPerDay,
                         daysPerWeek,
+                        oneTimeoriginalPrice,
+                        oneTimediscountActive,
+                        oneTimediscountPrice,
                         MonthlyoriginalPrice,
                         MonthlydiscountActive,
                         MonthlydiscountPrice,
@@ -2620,6 +2627,7 @@ exports.createPackage = async (req, res) => {
 
             return {
                 ...variation,
+                oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
                 Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
                 threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
                 sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
@@ -3089,6 +3097,9 @@ exports.updatePackage = async (req, res) => {
                     updatedVariations.push({
                         walksPerDay: findService.walksPerDay || 0,
                         daysPerWeek: findService.daysPerWeek || 0,
+                        oneTimeoriginalPrice: findService.oneTimeoriginalPrice || 0,
+                        oneTimediscountActive: findService.oneTimediscountActive || false,
+                        oneTimediscountPrice: findService.oneTimediscountPrice || 0,
                         MonthlyoriginalPrice: findService.MonthlyoriginalPrice || 0,
                         MonthlydiscountPrice: findService.MonthlydiscountPrice || 0,
                         MonthlydiscountActive: findService.MonthlydiscountActive || false,
@@ -3110,6 +3121,7 @@ exports.updatePackage = async (req, res) => {
 
         const variationsWithDiscounts = updatedVariations.map(variation => ({
             ...variation,
+            oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
             Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
             threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
             sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
@@ -3626,6 +3638,7 @@ exports.updateService = async (req, res) => {
 
                 return {
                     ...variation,
+                    oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
                     Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
                     threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
                     sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
@@ -4819,6 +4832,80 @@ exports.deleteExperienceScore = async (req, res) => {
     }
 };
 
+exports.createSize = async (req, res) => {
+    try {
+        const { size, status } = req.body;
+
+        const newSize = await Size.create({ size, status });
+
+        return res.status(201).json({ status: 201, message: 'Size created successfully', data: newSize });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to create size', error: error.message });
+    }
+};
+
+exports.getAllSizes = async (req, res) => {
+    try {
+        const sizes = await Size.find();
+
+        return res.status(200).json({ status: 200, message: 'Sizes retrieved successfully', data: sizes });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to retrieve sizes', error: error.message });
+    }
+};
+
+exports.getSizeById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const size = await Size.findById(id);
+
+        if (!size) {
+            return res.status(404).json({ message: 'Size not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Size retrieved successfully', data: size });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to retrieve size', error: error.message });
+    }
+};
+
+exports.updateSizeById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { size, status } = req.body;
+
+        const updatedSize = await Size.findByIdAndUpdate(
+            id,
+            { size, status },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedSize) {
+            return res.status(404).json({ message: 'Size not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Size updated successfully', data: updatedSize });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to update size', error: error.message });
+    }
+};
+
+exports.deleteSizeById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedSize = await Size.findByIdAndDelete(id);
+
+        if (!deletedSize) {
+            return res.status(404).json({ message: 'Size not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Size deleted successfully', data: deletedSize });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Failed to delete size', error: error.message });
+    }
+};
 
 
 
