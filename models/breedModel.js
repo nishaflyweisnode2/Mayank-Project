@@ -17,8 +17,8 @@ const breedSchema = new mongoose.Schema({
         type: String,
     },
     size: {
-        type: String,
-        enum: ['Small', 'Medium', 'Large']
+        type: schema.Types.ObjectId,
+        ref: "Size"
     },
     breedAggressive: {
         type: String,

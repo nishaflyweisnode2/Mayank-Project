@@ -7,7 +7,7 @@ const serviceSchema = new Schema({
     mainCategoryId: { type: Schema.Types.ObjectId, ref: 'mainCategory' },
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category' },
     subCategoryId: [{ type: Schema.Types.ObjectId, ref: 'subCategory' }],
-    Size: { type: Schema.Types.ObjectId, ref: 'Breed' },
+    size: { type: Schema.Types.ObjectId, ref: 'Size' },
     title: { type: String },
     description: { type: String },
     timeInMin: { type: Number },

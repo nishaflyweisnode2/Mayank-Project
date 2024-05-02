@@ -211,7 +211,7 @@ exports.updateProfile = async (req, res) => {
                                 email: req.body.email || data.email,
                                 phone: req.body.phone || data.phone,
                                 gender: req.body.gender || data.gender,
-                                alternatePhone: req.body.alternatePhone || data.alternatePhone,
+                                alternatePhone: req.body.alternatePhone || data.alternatePhone1,
                                 dob: req.body.dob || data.dob,
                                 address1: req.body.address1 || data.address1,
                                 address2: req.body.address2 || data.address2,

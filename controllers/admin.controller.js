@@ -156,7 +156,7 @@ exports.createBreed = async (req, res) => {
 };
 exports.getBreeds = async (req, res) => {
     try {
-        const breeds = await Breed.find().populate("mainCategory");
+        const breeds = await Breed.find().populate("mainCategory size");
         return res.status(200).json({ status: 200, data: breeds });
     } catch (error) {
         return res.status(500).json({ status: 500, message: error.message });
@@ -173,10 +173,10 @@ exports.getBreedsByMaincategory = async (req, res) => {
         }
 
         if (type) {
-            const breeds = await Breed.find({ mainCategory: mainCategoryId, type: type }).populate("mainCategory");
+            const breeds = await Breed.find({ mainCategory: mainCategoryId, type: type }).populate("mainCategory size");
             return res.status(200).json({ status: 200, data: breeds });
         } else {
-            const breeds = await Breed.find({ mainCategory: mainCategoryId }).populate("mainCategory");
+            const breeds = await Breed.find({ mainCategory: mainCategoryId }).populate("mainCategory size");
             return res.status(200).json({ status: 200, data: breeds });
         }
     } catch (error) {
@@ -185,7 +185,7 @@ exports.getBreedsByMaincategory = async (req, res) => {
 };
 exports.getBreedById = async (req, res) => {
     try {
-        const breed = await Breed.findById(req.params.id).populate('mainCategory');
+        const breed = await Breed.findById(req.params.id).populate('mainCategory size');
         if (!breed) {
             return res.status(404).json({ status: 404, message: 'Breed not found' });
         }
@@ -1842,7 +1842,7 @@ exports.createService1 = async (req, res) => {
 
 exports.createService = async (req, res) => {
     try {
-        const { mainCategoryId, categoryId, subCategoryId, breedId, title, description, timeInMin, isAddOnServices, variations, status } = req.body;
+        const { mainCategoryId, categoryId, subCategoryId, size, title, description, timeInMin, isAddOnServices, variations, status } = req.body;
 
         const findMainCategory = await mainCategory.findById(mainCategoryId);
         if (!findMainCategory) {
@@ -1857,10 +1857,10 @@ exports.createService = async (req, res) => {
             }
         }
 
-        if (breedId) {
-            const findbreed = await Breed.findOne({ _id: breedId });
-            if (!findbreed) {
-                return res.status(404).json({ message: "breed Not Found", status: 404, data: {} });
+        if (size) {
+            const finSize = await Size.findOne({ _id: size });
+            if (!finSize) {
+                return res.status(404).json({ message: "size Not Found", status: 404, data: {} });
             }
         }
 
@@ -1868,7 +1868,7 @@ exports.createService = async (req, res) => {
             title: req.body.title,
             mainCategoryId: findMainCategory._id,
             type: req.body.type,
-            breedId: req.body.breedId,
+            size: req.body.size,
         });
 
         if (existingService) {
@@ -1927,7 +1927,7 @@ exports.createService = async (req, res) => {
             mainCategoryId: findMainCategory._id,
             categoryId: findCategory ? findCategory._id : null,
             subCategoryId: findSubCategories.map(subCategory => subCategory._id),
-            breedId,
+            size,
             title,
             description,
             timeInMin,
@@ -2217,7 +2217,7 @@ exports.getServiceWithoutSubCategory = async (req, res) => {
 };
 exports.getAllService = async (req, res) => {
     try {
-        const findService = await service.find().populate('mainCategoryId', 'name').populate('categoryId', 'name').populate('subCategoryId', 'name')
+        const findService = await service.find().populate('mainCategoryId', 'name').populate('categoryId', 'name').populate('subCategoryId', 'name').populate('size', 'size')
 
         if (findService.length > 0) {
             return res.status(200).json({
@@ -2456,7 +2456,7 @@ exports.createPackage1 = async (req, res) => {
 
 exports.createPackage = async (req, res) => {
     try {
-        let { mainCategoryId, categoryId, subCategoryId, breedId, title, packageType, description, timeInMin, services, addOnServices, validUpTo, status, variations } = req.body;
+        let { mainCategoryId, categoryId, subCategoryId, size, title, packageType, description, timeInMin, services, addOnServices, validUpTo, status, variations } = req.body;
 
         const findMainCategory = await mainCategory.findById(mainCategoryId);
         if (!findMainCategory) {
@@ -2635,10 +2635,10 @@ exports.createPackage = async (req, res) => {
             };
         });
 
-        if (breedId) {
-            const findbreed = await Breed.findOne({ _id: breedId });
-            if (!findbreed) {
-                return res.status(404).json({ message: "breed Not Found", status: 404, data: {} });
+        if (size) {
+            const findSize = await Size.findOne({ _id: size });
+            if (!findSize) {
+                return res.status(404).json({ message: "size Not Found", status: 404, data: {} });
             }
         }
 
@@ -2659,7 +2659,7 @@ exports.createPackage = async (req, res) => {
             mainCategoryId: findMainCategory._id,
             categoryId: findCategory ? findCategory._id : null,
             subCategoryId: findSubCategories.map(subCategory => subCategory._id),
-            breedId,
+            size,
             title,
             description,
             totalTime,
@@ -3031,7 +3031,7 @@ exports.updatePackage = async (req, res) => {
         }
 
         const {
-            mainCategoryId, categoryId, subCategoryId, breedId, title, packageType, description, timeInMin, services, addOnServices, validUpTo, status, variations, selectedCount
+            mainCategoryId, categoryId, subCategoryId, size, title, packageType, description, timeInMin, services, addOnServices, validUpTo, status, variations, selectedCount
         } = req.body;
 
         const existingPackage = await Package.findById(id);
@@ -3143,7 +3143,7 @@ exports.updatePackage = async (req, res) => {
         existingPackage.mainCategoryId = findMainCategory._id;
         existingPackage.categoryId = findCategory ? findCategory._id : null;
         existingPackage.subCategoryId = findSubCategories.map(subCategory => subCategory._id);
-        existingPackage.breedId = breedId;
+        existingPackage.size = size;
         existingPackage.title = title;
         existingPackage.description = description;
         existingPackage.totalTime = totalTime;
@@ -3571,7 +3571,7 @@ exports.updateService1 = async (req, res) => {
 
 exports.updateService = async (req, res) => {
     try {
-        const { mainCategoryId, categoryId, subCategoryId, breedId, title, description, timeInMin, variations, images, rating, sellCount, useBy, selectedCount, selected, type, status, isAddOnServices } = req.body;
+        const { mainCategoryId, categoryId, subCategoryId, size, title, description, timeInMin, variations, images, rating, sellCount, useBy, selectedCount, selected, type, status, isAddOnServices } = req.body;
         const serviceId = req.params.id;
 
         const Service = await service.findById(serviceId);
@@ -3615,7 +3615,7 @@ exports.updateService = async (req, res) => {
         if (mainCategoryId) Service.mainCategoryId = findMainCategory._id;
         if (categoryId) Service.categoryId = findCategory ? findCategory._id : null;
         if (subCategoryId) Service.subCategoryId = findSubCategories.map(subCategory => subCategory._id);
-        if (breedId) Service.breedId = breedId;
+        if (size) Service.size = size;
         if (title) Service.title = title;
         if (description) Service.description = description;
         if (timeInMin) {

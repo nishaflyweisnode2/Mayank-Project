@@ -7,7 +7,7 @@ const packageSchema = new Schema({
     mainCategoryId: { type: Schema.Types.ObjectId, ref: 'mainCategory' },
     categoryId: { type: Schema.Types.ObjectId, ref: 'Category' },
     subCategoryId: [{ type: Schema.Types.ObjectId, ref: 'subCategory' }],
-    breedId: { type: Schema.Types.ObjectId, ref: 'Breed' },
+    size: { type: Schema.Types.ObjectId, ref: 'Size' },
     title: { type: String },
     description: { type: String },
     timeInMin: { type: Number },
