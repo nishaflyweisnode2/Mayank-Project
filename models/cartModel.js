@@ -200,9 +200,9 @@ const CartSchema = new Schema({
                 type: Number,
                 default: 0
         },
-        breed: {
+        size: {
                 type: Schema.Types.ObjectId,
-                ref: 'Breed',
+                ref: 'Size',
         },
         pets: {
                 type: Schema.Types.ObjectId,

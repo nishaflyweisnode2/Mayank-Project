@@ -1615,7 +1615,7 @@ exports.addToCartSingleService = async (req, res) => {
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
-                                breed: findPet.breed,
+                                size: findPet.size,
                                 pets: findPet._id,
                         };
 
@@ -1749,7 +1749,7 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
-                                breed: findPet.breed,
+                                size: findPet.size,
                                 pets: findPet._id,
                         };
 
@@ -1969,7 +1969,7 @@ exports.addToCartPackageEssential = async (req, res) => {
                         price: price,
                         quantity: quantity,
                         total: totalAmount,
-                        breed: findPet.breed,
+                        size: findPet.size,
                         pets: findPet._id,
                 };
 
@@ -2063,7 +2063,7 @@ exports.addToCartPackageStandard = async (req, res) => {
                         price: price,
                         quantity: quantity,
                         total: totalAmount,
-                        breed: findPet.breed,
+                        size: findPet.size,
                         pets: findPet._id,
                 };
 
@@ -2157,7 +2157,7 @@ exports.addToCartPackagePro = async (req, res) => {
                         price: price,
                         quantity: quantity,
                         total: totalAmount,
-                        breed: findPet.breed,
+                        size: findPet.size,
                         pets: findPet._id,
                 };
 
