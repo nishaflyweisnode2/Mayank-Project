@@ -54,7 +54,13 @@ module.exports = (app) => {
         app.get('/api/v1/partner/complaint-suggestiion', [authJwt.verifyToken], auth.getAllComplaintSuggestions);
         app.post('/api/v1/partner-create-referral', authJwt.verifyToken, auth.createReferral);
         app.post('/api/v1/partner/consent/forms', [authJwt.verifyToken], auth.createConsentForm);
-
+        app.get('/api/v1/partner/slot', [authJwt.verifyToken], auth.getAllSlots);
+        app.get('/api/v1/partner/slot/:id', [authJwt.verifyToken], auth.getSlotById);
+        app.get('/api/v1/partner/attendance', [authJwt.verifyToken], auth.getAllAttendanceRecords);
+        app.get('/api/v1/partner/attendance/:id', [authJwt.verifyToken], auth.getAttendanceRecordById);
+        app.post('/api/v1/partner/attendance/:attendanceId/mark', [authJwt.verifyToken], auth.markAttendance);
+        app.post('/api/v1/partner/enableLockScreen/add', [authJwt.verifyToken], auth.enableLockScreenPassword)
+        app.put('/api/v1/partner/disableLockScreen', [authJwt.verifyToken], auth.disableLockScreenPassword)
 
 
 }

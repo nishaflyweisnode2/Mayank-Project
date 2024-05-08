@@ -1516,7 +1516,7 @@ exports.addToCartSingleService = async (req, res) => {
                 const findService = await service.findById({ _id: req.body._id });
                 // console.log("findPet", findPet);
                 console.log("findService", findService);
-                console.log("findService.variations.MonthlyoriginalPrice", findService.variations.MonthlyoriginalPrice);
+                console.log("findService.variations.oneTimeoriginalPrice", findService.variations.oneTimeoriginalPrice);
 
                 if (!findService) {
                         return res.status(404).json({ status: 404, message: "Service not found" });
@@ -1650,7 +1650,7 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                 const findService = await service.findById({ _id: req.body._id, isAddOnServices: true });
                 // console.log("findPet", findPet);
                 console.log("findService", findService);
-                console.log("findService.variations.MonthlyoriginalPrice", findService.variations.MonthlyoriginalPrice);
+                console.log("findService.variations.oneTimeoriginalPrice", findService.variations.oneTimeoriginalPrice);
 
                 if (!findService) {
                         return res.status(404).json({ status: 404, message: "Service not found" });
@@ -1914,7 +1914,7 @@ exports.addToCartPackageEssential = async (req, res) => {
                 if (!userData) {
                         return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
                 }
-                const findCart = await Cart.findOne({ userId });
+                let findCart = await Cart.findOne({ userId });
                 const packageId = req.body.packageId;
 
                 const findPet = await Pet.findOne({ user: userData._id });
@@ -1941,13 +1941,20 @@ exports.addToCartPackageEssential = async (req, res) => {
                 let discountPrice = 0;
 
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        const variation = findPackage.variations[0];
-                        originalPrice = variation.MonthlyoriginalPrice || 0;
-                        discountActive = variation.MonthlydiscountActive || false;
-                        discountPrice = variation.MonthlydiscountPrice || 0;
+                        for (const variation of findPackage.variations) {
+                                if (variation.oneTimediscountActive) {
+                                        discountPrice += variation.oneTimediscountPrice || 0;
+                                        console.log("discountPrice", discountPrice);
+                                } else {
+                                        originalPrice += variation.oneTimeoriginalPrice || 0;
+                                        console.log("originalPrice", originalPrice);
+                                }
+                        }
                 }
+                // let price = discountActive ? discountPrice : originalPrice || 0;
+                // console.log("price", price);
 
-                let price = discountActive ? discountPrice : originalPrice || 0;
+                let price = originalPrice + discountPrice;
                 let quantity = req.body.quantity;
 
                 if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
@@ -1973,15 +1980,7 @@ exports.addToCartPackageEssential = async (req, res) => {
                         pets: findPet._id,
                 };
 
-                if (findCart) {
-                        findCart.packages.push(newPackage);
-                        findCart.totalAmount += totalAmount;
-                        findCart.paidAmount += paidAmount;
-                        findCart.totalItem += 1;
-
-                        await findCart.save();
-                        return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
-                } else {
+                if (!findCart) {
                         const obj = {
                                 userId: userId,
                                 Charges: findCharges,
@@ -1992,9 +1991,24 @@ exports.addToCartPackageEssential = async (req, res) => {
                                 totalItem: 1,
                         };
 
-                        const newCart = await Cart.create(obj);
-                        return res.status(200).json({ status: 200, message: "Package added to a new cart.", data: newCart });
+                        findCart = await Cart.create(obj);
+                } else {
+                        const existingPackageIndex = findCart.packages.findIndex(pkg => pkg.packageId.equals(newPackage.packageId));
+                        if (existingPackageIndex !== -1) {
+                                findCart.packages[existingPackageIndex].quantity += quantity;
+                                findCart.packages[existingPackageIndex].total += totalAmount;
+                        } else {
+                                findCart.packages.push(newPackage);
+                        }
+
+                        findCart.totalAmount += totalAmount;
+                        findCart.paidAmount += paidAmount;
+                        findCart.totalItem += 1;
+
+                        await findCart.save();
                 }
+
+                return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
         } catch (error) {
                 console.error(error);
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
@@ -2035,13 +2049,18 @@ exports.addToCartPackageStandard = async (req, res) => {
                 let discountPrice = 0;
 
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        const variation = findPackage.variations[0];
-                        originalPrice = variation.MonthlyoriginalPrice || 0;
-                        discountActive = variation.MonthlydiscountActive || false;
-                        discountPrice = variation.MonthlydiscountPrice || 0;
+                        for (const variation of findPackage.variations) {
+                                if (variation.oneTimediscountActive) {
+                                        discountPrice += variation.oneTimediscountPrice || 0;
+                                        console.log("discountPrice", discountPrice);
+                                } else {
+                                        originalPrice += variation.oneTimeoriginalPrice || 0;
+                                        console.log("originalPrice", originalPrice);
+                                }
+                        }
                 }
 
-                let price = discountActive ? discountPrice : originalPrice || 0;
+                let price = originalPrice + discountPrice;
                 let quantity = req.body.quantity;
 
                 if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
@@ -2129,13 +2148,18 @@ exports.addToCartPackagePro = async (req, res) => {
                 let discountPrice = 0;
 
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        const variation = findPackage.variations[0];
-                        originalPrice = variation.MonthlyoriginalPrice || 0;
-                        discountActive = variation.MonthlydiscountActive || false;
-                        discountPrice = variation.MonthlydiscountPrice || 0;
+                        for (const variation of findPackage.variations) {
+                                if (variation.oneTimediscountActive) {
+                                        discountPrice += variation.oneTimediscountPrice || 0;
+                                        console.log("discountPrice", discountPrice);
+                                } else {
+                                        originalPrice += variation.oneTimeoriginalPrice || 0;
+                                        console.log("originalPrice", originalPrice);
+                                }
+                        }
                 }
 
-                let price = discountActive ? discountPrice : originalPrice || 0;
+                let price = originalPrice + discountPrice;
                 let quantity = req.body.quantity;
 
                 if (isNaN(price) || isNaN(quantity) || quantity <= 0) {

@@ -4,7 +4,7 @@ var multer = require("multer");
 const path = require("path");
 const express = require("express");
 const router = express()
-const { bannerUpload, subCategoryUpload, categoryUpload, serviceUpload, BreedUpload, E4UUpload, offerUpload, charges, subCategory, mainCategoryBannerUpload, testimonial } = require('../middlewares/imageUpload')
+const { bannerUpload, subCategoryUpload, categoryUpload, serviceUpload, BreedUpload, E4UUpload, offerUpload, charges, subCategory, mainCategoryBannerUpload, testimonial, spAgreementUpload } = require('../middlewares/imageUpload')
 module.exports = (app) => {
         app.post("/api/v1/admin/registration", auth.registration);
         app.post("/api/v1/admin/login", auth.signin);
@@ -182,7 +182,23 @@ module.exports = (app) => {
         app.get('/api/v1/admin/sizes/:id', [authJwt.verifyToken], auth.getSizeById);
         app.put('/api/v1/admin/sizes/:id', [authJwt.verifyToken], auth.updateSizeById);
         app.delete('/api/v1/admin/sizes/:id', [authJwt.verifyToken], auth.deleteSizeById);
-
+        app.post('/api/v1/admin/partner-sp-agreements', authJwt.verifyToken, spAgreementUpload.fields([
+                { name: 'photo', maxCount: 1 },
+                { name: 'agreementDocument', maxCount: 1 },
+                { name: 'aadharFrontImage', maxCount: 1 },
+                { name: 'aadharBackImage', maxCount: 1 },
+                { name: 'panCardImage', maxCount: 1 }
+        ]), auth.createSPAgreement);
+        app.get('/api/v1/admin/partner-sp-agreements', authJwt.verifyToken, auth.getAllSPAgreements);
+        app.get('/api/v1/admin/partner-sp-agreements/:id', authJwt.verifyToken, auth.getSPAgreementById);
+        app.put('/api/v1/admin/partner-sp-agreements/:id', authJwt.verifyToken, spAgreementUpload.fields([
+                { name: 'photo', maxCount: 1 },
+                { name: 'agreementDocument', maxCount: 1 },
+                { name: 'aadharFrontImage', maxCount: 1 },
+                { name: 'aadharBackImage', maxCount: 1 },
+                { name: 'panCardImage', maxCount: 1 }
+        ]), auth.updateSPAgreement);
+        app.delete('/api/v1/admin/partner-sp-agreements/:id', authJwt.verifyToken, auth.deleteSPAgreementById);
 
 
 

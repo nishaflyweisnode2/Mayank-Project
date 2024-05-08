@@ -192,6 +192,14 @@ var userSchema = new schema(
             type: String
         },
         role: [{ type: mongoose.Schema.ObjectId, ref: 'mainCategory' }],
+        lockScreenPassword: {
+            type: String,
+            default: null
+        },
+        isLockScreenPassword: {
+            type: Boolean,
+            default: false
+        }
     },
     { timestamps: true }
 );

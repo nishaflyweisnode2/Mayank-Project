@@ -18,6 +18,8 @@ const Training = require('../models/traningVideoModel');
 const ComplaintSuggestion = require('../models/complainet&suggestionModel');
 const Referral = require('../models/refferalModel');
 const ConsentForm = require('../models/consentFormModel');
+const Attendance = require('../models/attendanceModel');
+const Slot = require('../models/SlotModel');
 
 
 
@@ -382,7 +384,205 @@ exports.getAddressbyId = async (req, res, next) => {
                 return res.status(501).send({ status: 501, message: "server error.", data: {}, });
         }
 };
+exports.getAllSlots = async (req, res) => {
+        try {
+                const slots = await Slot.find();
 
+                return res.status(200).json({
+                        status: 200,
+                        message: 'Slots retrieved successfully.',
+                        data: slots,
+                });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({
+                        status: 500,
+                        message: 'Internal server error',
+                        data: error.message,
+                });
+        }
+};
+exports.getSlotById = async (req, res) => {
+        try {
+                const slot = await Slot.findById(req.params.id);
+
+                if (!slot) {
+                        return res.status(404).json({
+                                status: 404,
+                                message: 'Slot not found.',
+                                data: {},
+                        });
+                }
+
+                return res.status(200).json({
+                        status: 200,
+                        message: 'Slot retrieved successfully.',
+                        data: slot,
+                });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({
+                        status: 500,
+                        message: 'Internal server error',
+                        data: error.message,
+                });
+        }
+};
+async function createAttendanceRecord() {
+        try {
+                const usersData = await User.find({ userType: "PARTNER" });
+                if (!usersData || usersData.length === 0) {
+                        console.log("No users found");
+                        return;
+                }
+
+                const todayDate = new Date().toISOString().split('T')[0];
+
+                for (const userData of usersData) {
+                        const existingRecord = await Attendance.findOne({ userId: userData._id, date: todayDate });
+                        if (existingRecord) {
+                                console.log(`Attendance record already exists for user ${userData._id}`);
+                                continue;
+                        }
+
+                        const slots = await Slot.find();
+                        const attendanceRecord = new Attendance({
+                                userId: userData._id,
+                                date: todayDate,
+                                timeSlots: slots.map(slot => ({
+                                        startTime: slot.timeFrom,
+                                        endTime: slot.timeTo,
+                                        available: false
+                                }))
+                        });
+
+                        await attendanceRecord.save();
+
+                        console.log(`Attendance record created for user ${userData._id}`);
+                }
+        } catch (error) {
+                console.error(error);
+                return { status: 500, message: 'Server error' };
+        }
+}
+const intervalMinutes2 = 30;
+const intervalMilliseconds2 = intervalMinutes2 * 60 * 1000;
+const startInterval2 = () => {
+        console.log(`Starting interval to fetch and save Attendance data every ${intervalMinutes2} minutes`);
+        setInterval(async () => {
+                console.log('Fetching and saving attendance data...');
+                await createAttendanceRecord();
+        }, intervalMilliseconds2);
+};
+startInterval2();
+
+exports.getAllAttendanceRecords = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                const attendanceRecords = await Attendance.find({ userId: userId });
+
+                return res.status(200).json({ status: 200, data: attendanceRecords });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, message: 'Server error' });
+        }
+};
+exports.getAttendanceRecordById = async (req, res) => {
+        try {
+                const attendanceRecord = await Attendance.findById(req.params.id);
+                if (!attendanceRecord) {
+                        return res.status(404).json({ status: 404, message: 'Attendance record not found' });
+                }
+                return res.status(200).json({ status: 200, data: attendanceRecord });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, message: 'Server error' });
+        }
+};
+exports.markAttendance = async (req, res) => {
+        try {
+                const attendanceId = req.params.attendanceId;
+                const { allDay, timeSlots, isMarkAttendance } = req.body;
+
+                const attendanceRecord = await Attendance.findById(attendanceId);
+                if (!attendanceRecord) {
+                        return res.status(404).json({ status: 404, message: 'Attendance record not found' });
+                }
+                attendanceRecord.timeSlots.forEach(slot => {
+                        slot.available = false;
+                });
+
+                if (allDay) {
+                        attendanceRecord.timeSlots.forEach(slot => {
+                                slot.available = true;
+                        });
+                        attendanceRecord.isMarkAttendance = isMarkAttendance || false
+                } else {
+                        if (!timeSlots || !Array.isArray(timeSlots)) {
+                                return res.status(400).json({ status: 400, message: 'Invalid timeSlots format' });
+                        }
+
+                        for (const providedSlot of timeSlots) {
+                                const foundSlot = attendanceRecord.timeSlots.find(slot =>
+                                        slot.startTime === providedSlot.startTime && slot.endTime === providedSlot.endTime
+                                );
+                                if (foundSlot) {
+                                        foundSlot.available = providedSlot.available;
+                                }
+                        }
+                        attendanceRecord.isMarkAttendance = isMarkAttendance || false
+                }
+
+                await attendanceRecord.save();
+                return res.status(200).json({ status: 200, message: 'Attendance marked successfully', data: attendanceRecord });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, message: 'Server error' });
+        }
+};
+exports.enableLockScreenPassword = async (req, res) => {
+        try {
+                const { lockScreenPassword } = req.body;
+
+                const userId = req.user._id;
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                userData.lockScreenPassword = lockScreenPassword;
+                userData.isLockScreenPassword = true;
+                await userData.save();
+
+                return res.json({ status: 200, message: 'Lock screen password enabled successfully', data: userData });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, error: 'Failed to enable lock screen password' });
+        }
+};
+exports.disableLockScreenPassword = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                userData.lockScreenPassword = null;
+                userData.isLockScreenPassword = false;
+                await userData.save();
+
+                return res.json({ status: 200, message: 'Lock screen password disabled successfully', data: userData });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, error: 'Failed to disable lock screen password' });
+        }
+};
 
 
 
@@ -498,7 +698,13 @@ exports.createSPAgreement = async (req, res) => {
 
 exports.getAllSPAgreements = async (req, res) => {
         try {
-                const spAgreements = await SPAgreement.find();
+                const userId = req.user._id;
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                const spAgreements = await SPAgreement.find({ userId: userId });
                 res.json({ tatus: 200, message: "spAgreement data retrived sucessfully", data: spAgreements });
         } catch (error) {
                 console.error(error);

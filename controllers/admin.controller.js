@@ -2557,8 +2557,8 @@ exports.createPackage = async (req, res) => {
                         walksPerDay = firstVariation.walksPerDay || 0;
                         daysPerWeek = firstVariation.daysPerWeek || 0;
                         oneTimeoriginalPrice = firstVariation.oneTimeoriginalPrice || 0;
-                        oneTimediscountActive = firstVariation.oneTimediscountActive || false;
                         oneTimediscountPrice = firstVariation.oneTimediscountPrice || 0;
+                        oneTimediscountActive = firstVariation.oneTimediscountActive || false;
                         MonthlyoriginalPrice = firstVariation.MonthlyoriginalPrice || 0;
                         MonthlydiscountPrice = firstVariation.MonthlydiscountPrice || 0;
                         MonthlydiscountActive = firstVariation.MonthlydiscountActive || false;
@@ -2575,8 +2575,8 @@ exports.createPackage = async (req, res) => {
                         walksPerDay = findService.walksPerDay || 0;
                         daysPerWeek = findService.daysPerWeek || 0;
                         oneTimeoriginalPrice = firstVariation.oneTimeoriginalPrice || 0;
-                        oneTimediscountActive = firstVariation.oneTimediscountActive || false;
                         oneTimediscountPrice = firstVariation.oneTimediscountPrice || 0;
+                        oneTimediscountActive = firstVariation.oneTimediscountActive || false;
                         MonthlyoriginalPrice = findService.MonthlyoriginalPrice || 0;
                         MonthlydiscountPrice = findService.MonthlydiscountPrice || 0;
                         MonthlydiscountActive = findService.MonthlydiscountActive || false;
@@ -2595,8 +2595,8 @@ exports.createPackage = async (req, res) => {
                         walksPerDay,
                         daysPerWeek,
                         oneTimeoriginalPrice,
-                        oneTimediscountActive,
                         oneTimediscountPrice,
+                        oneTimediscountActive,
                         MonthlyoriginalPrice,
                         MonthlydiscountActive,
                         MonthlydiscountPrice,
@@ -4907,5 +4907,88 @@ exports.deleteSizeById = async (req, res) => {
     }
 };
 
+exports.createSPAgreement = async (req, res) => {
+    try {
+        const { userId } = req.body;
+        const spAgreement = new SPAgreement({
+            agreementDocument: req.files['agreementDocument'][0].path,
+            userId: userId,
+        });
 
+        const savedSPAgreement = await spAgreement.save();
+
+        res.status(201).json({ status: 201, message: "created sucessfully", data: savedSPAgreement });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to create SP Agreement' });
+    }
+};
+
+exports.getAllSPAgreements = async (req, res) => {
+    try {
+        const spAgreements = await SPAgreement.find();
+        res.json({ tatus: 200, message: "spAgreement data retrived sucessfully", data: spAgreements });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to get SP Agreements' });
+    }
+};
+
+exports.getSPAgreementById = async (req, res) => {
+    const spAgreementId = req.params.id;
+
+    try {
+        const spAgreement = await SPAgreement.findById(spAgreementId);
+        if (!spAgreement) {
+            return res.status(404).json({ message: 'SP Agreement not found' });
+        }
+        res.json({ status: 200, message: "spAgreement data retrived sucessfully", data: spAgreement });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to get SP Agreement' });
+    }
+};
+
+exports.updateSPAgreement = async (req, res) => {
+    try {
+        const spAgreementId = req.params.id;
+        const { userId } = req.body;
+        const updatedSPAgreement = {
+            agreementDocument: req.files['agreementDocument'][0].path,
+            userId: userId,
+        };
+
+        const updatedSPAgreementResult = await SPAgreement.findByIdAndUpdate(
+            spAgreementId,
+            updatedSPAgreement,
+            { new: true }
+        );
+
+        if (!updatedSPAgreementResult) {
+            return res.status(404).json({ status: 404, message: 'SP Agreement not found' });
+        }
+
+        return res.json({ status: 200, message: "updated sucessfully", data: updatedSPAgreementResult });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, error: 'Failed to update SP Agreement' });
+    }
+};
+exports.deleteSPAgreementById = async (req, res) => {
+    try {
+    const spAgreementId = req.params.id;
+
+        const spAgreement = await SPAgreement.findById(spAgreementId);
+        if (!spAgreement) {
+            return res.status(404).json({ message: 'SP Agreement not found' });
+        }
+
+        await SPAgreement.findByIdAndDelete(spAgreementId);
+
+        return res.json({ status: 200, message: 'SP Agreement deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({status: 500, error: 'Failed to delete SP Agreement' });
+    }
+};
 
