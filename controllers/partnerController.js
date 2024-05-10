@@ -20,6 +20,7 @@ const Referral = require('../models/refferalModel');
 const ConsentForm = require('../models/consentFormModel');
 const Attendance = require('../models/attendanceModel');
 const Slot = require('../models/SlotModel');
+const OnboardingDetails = require('../models/onBoardingMode');
 
 
 
@@ -583,9 +584,315 @@ exports.disableLockScreenPassword = async (req, res) => {
                 return res.status(500).json({ status: 500, error: 'Failed to disable lock screen password' });
         }
 };
+exports.updatePoliceVerificationDocuments = async (req, res) => {
+        try {
+                const userId = req.user._id;
 
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
 
+                let existingDetails = await OnboardingDetails.findOne({ userId: userId });
 
+                if (!existingDetails) {
+                        existingDetails = new OnboardingDetails({ userId: userId });
+                }
+
+                if (req.file) {
+                        existingDetails.policeVerification = req.file.path;
+                        existingDetails.isPoliceVerificationUpload = true;
+                }
+
+                const updatedDetails = await existingDetails.save();
+
+                return res.status(200).json({ status: 200, message: 'Onboarding Details police Verification documents updated successfully', data: updatedDetails });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+        }
+};
+exports.updateCertificateDocuments = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let existingDetails = await OnboardingDetails.findOne({ userId: userId });
+
+                if (!existingDetails) {
+                        existingDetails = new OnboardingDetails({ userId: userId });
+                }
+                let certificateDocument = [];
+                if (req.files) {
+                        certificateDocument = req.files.map(file => ({ img: file.path }));
+                }
+
+                existingDetails.certificateDocument = certificateDocument;
+                existingDetails.isCertificateDocumentUpload = true;
+
+                const updatedDetails = await existingDetails.save();
+
+                return res.status(200).json({ status: 200, message: 'Onboarding Details Certificate documents updated successfully', data: updatedDetails });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+        }
+};
+exports.updateAddressProof = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { name, email, yourAddress, mobileNumber, pincode, city, state, district, alternateMobileNumber } = req.body;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let existingDetails = await OnboardingDetails.findOne({ userId: userId });
+
+                if (!existingDetails) {
+                        existingDetails = new OnboardingDetails({ userId: userId });
+                }
+
+                if (req.files['officeAddressProof']) {
+                        let dlFront = req.files['officeAddressProof'];
+                        existingDetails.addressProof.officeAddressProof = dlFront[0].path;
+                        existingDetails.addressProof.isUploadAddress = true;
+                }
+                if (req.files['electricBillProof']) {
+                        let dlBack = req.files['electricBillProof'];
+                        existingDetails.addressProof.electricBillProof = dlBack[0].path;
+                        existingDetails.addressProof.isUploadAddress = true;
+                }
+
+                console.log("existingDetails.addressProof.officeAddressProof", existingDetails.addressProof.officeAddressProof);
+                if (name) existingDetails.addressProof.name = name;
+                if (email) existingDetails.addressProof.email = email;
+                if (yourAddress) existingDetails.addressProof.yourAddress = yourAddress;
+                if (mobileNumber) existingDetails.addressProof.mobileNumber = mobileNumber;
+                if (pincode) existingDetails.addressProof.pincode = pincode;
+                if (city) existingDetails.addressProof.city = city;
+                if (state) existingDetails.addressProof.state = state;
+                if (district) existingDetails.addressProof.district = district;
+                if (alternateMobileNumber) existingDetails.addressProof.alternateMobileNumber = alternateMobileNumber;
+
+                existingDetails.addressProof.isUploadAddress = true;
+
+                const updatedCar = await existingDetails.save();
+
+                return res.status(200).json({ status: 200, message: 'Address proof details updated successfully', data: updatedCar });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+        }
+};
+exports.updateAadharDetails = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { aadharNumber } = req.body;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let existingDetails = await OnboardingDetails.findOne({ userId: userId });
+
+                if (!existingDetails) {
+                        existingDetails = new OnboardingDetails({ userId: userId });
+                }
+
+                if (req.files['aadharFrontImage']) {
+                        let aadharFrontImage = req.files['aadharFrontImage'];
+                        existingDetails.aadharFrontImage = aadharFrontImage[0].path;
+                        existingDetails.isAadharCardUpload = true;
+                }
+                if (req.files['aadharBackImage']) {
+                        let aadharBackImage = req.files['aadharBackImage'];
+                        existingDetails.aadharBackImage = aadharBackImage[0].path;
+                        existingDetails.isAadharCardUpload = true;
+                }
+
+                existingDetails.aadharOtp = newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false, });
+                existingDetails.aadharNumber = aadharNumber;
+
+                const updatedCar = await existingDetails.save();
+
+                return res.status(200).json({ status: 200, message: 'aadhaar details updated successfully', data: updatedCar });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+        }
+};
+exports.updatePancardDocuments = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { panNumber } = req.body;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let existingDetails = await OnboardingDetails.findOne({ userId: userId });
+
+                if (!existingDetails) {
+                        existingDetails = new OnboardingDetails({ userId: userId });
+                }
+
+                if (req.file) {
+                        existingDetails.panCardImage = req.file.path;
+                        existingDetails.isPanCardUpload = true;
+                }
+                existingDetails.panNumber = panNumber;
+
+                const updatedDetails = await existingDetails.save();
+
+                return res.status(200).json({ status: 200, message: 'Onboarding Details PanCard documents updated successfully', data: updatedDetails });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+        }
+};
+exports.updateBankDetails = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { bankName, accountNumber, reAccountNumber, accountHolderName, ifscCode } = req.body;
+
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let existingDetails = await OnboardingDetails.findOne({ userId: userId });
+
+                if (!existingDetails) {
+                        existingDetails = new OnboardingDetails({ userId: userId });
+                }
+
+                if (req.file) {
+                        existingDetails.bankDetails.cheque = req.file.path;
+                        existingDetails.bankDetails.isUploadbankDetails = true;
+                }
+
+                if (bankName) existingDetails.bankDetails.bankName = bankName;
+                if (accountNumber) existingDetails.bankDetails.accountNumber = accountNumber;
+                if (reAccountNumber) existingDetails.bankDetails.reAccountNumber = reAccountNumber;
+                if (accountHolderName) existingDetails.bankDetails.accountHolderName = accountHolderName;
+                if (ifscCode) existingDetails.bankDetails.ifscCode = ifscCode;
+
+                existingDetails.bankDetails.isUploadbankDetails = true;
+
+                const updatedCar = await existingDetails.save();
+
+                return res.status(200).json({ status: 200, message: 'Address proof details updated successfully', data: updatedCar });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ status: 500, error: 'Internal Server Error' });
+        }
+};
+exports.approveAadharVerifyOtp = async (req, res) => {
+        try {
+                const partnerId = req.user._id;
+                const { otp } = req.body;
+
+                const findUser = await User.findById(partnerId);
+                if (!findUser) {
+                        return res.status(404).json({ status: 404, message: 'User not found' });
+                }
+
+                let existingDetails = await OnboardingDetails.findOne({ userId: partnerId });
+
+                if (!existingDetails) {
+                        return res.status(400).json({ status: 400, message: "not fount" });
+                }
+                if (existingDetails.aadharOtp !== otp) {
+                        return res.status(400).json({ status: 400, message: "Invalid OTP" });
+                }
+                await existingDetails.save();
+
+                return res.status(200).send({ status: 200, message: "OTP verified successfully", data: existingDetails });
+        } catch (err) {
+                console.error(err.message);
+                return res.status(500).send({ error: "Internal server error" + err.message });
+        }
+};
+exports.approveAadharResendOTP = async (req, res) => {
+        try {
+                const partnerId = req.user._id;
+                const user = await User.findById(partnerId);
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: 'User not found' });
+                }
+
+                const otp = newOTP.generate(4, { alphabets: false, upperCase: false, specialChar: false });
+
+                let existingDetails = await OnboardingDetails.findOne({ userId: partnerId });
+
+                if (!existingDetails) {
+                        return res.status(400).json({ status: 400, message: "not fount" });
+                }
+                existingDetails.aadharOtp = otp;
+                await existingDetails.save();
+
+                return res.status(200).send({ status: 200, message: "OTP resent", data: existingDetails });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
+exports.switchRole = async (req, res) => {
+        try {
+                const partnerId = req.user._id;
+                const roleId = req.params.roleId;
+
+                const user = await User.findById(partnerId).populate('role');
+                if (!user) {
+                        return res.status(404).json({ message: 'User not found' });
+                }
+
+                let roleIndex = -1;
+                for (let i = 0; i < user.role.length; i++) {
+                        if (user.role[i]._id.toString() === roleId) {
+                                roleIndex = i;
+                                break;
+                        }
+                }
+
+                if (roleIndex === -1) {
+                        return res.status(404).json({ message: 'Role not found for this user' });
+                }
+
+                user.currentRole = roleId;
+                await user.save();
+
+                return res.status(200).json({ message: 'User role switched successfully', data: user });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+        }
+};
+exports.getCurrentRole = async (req, res) => {
+        try {
+                const partnerId = req.user._id;
+
+                const user = await User.findById(partnerId).populate('role currentRole');
+                if (!user) {
+                        return res.status(404).json({ message: 'User not found' });
+                }
+
+                const currentRoleId = user.currentRole;
+
+                return res.status(200).json({ message: 'Current role retrieved successfully', currentRoleId });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({ error: 'Internal Server Error' });
+        }
+};
 
 
 

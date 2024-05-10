@@ -3,7 +3,7 @@ const leaveController = require('../controllers/leavesController');
 const HelpLines = require('../controllers/helpLinesController');
 
 const authJwt = require("../middlewares/authJwt");
-const { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, userProfileUpload, spAgreementUpload, complaintSuggestion } = require('../middlewares/imageUpload')
+const { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, userProfileUpload, spAgreementUpload, complaintSuggestion, addressPrrof, kpUpload, panCardimage, policeVerification, certificateDocument, kpUpload1, cheque } = require('../middlewares/imageUpload')
 const express = require("express");
 const app = express()
 module.exports = (app) => {
@@ -61,6 +61,15 @@ module.exports = (app) => {
         app.post('/api/v1/partner/attendance/:attendanceId/mark', [authJwt.verifyToken], auth.markAttendance);
         app.post('/api/v1/partner/enableLockScreen/add', [authJwt.verifyToken], auth.enableLockScreenPassword)
         app.put('/api/v1/partner/disableLockScreen', [authJwt.verifyToken], auth.disableLockScreenPassword)
-
+        app.put('/api/v1/partner/updateAddressProof', [authJwt.verifyToken], kpUpload1, auth.updateAddressProof);
+        app.put('/api/v1/partner/updateAadharDetails', [authJwt.verifyToken], kpUpload, auth.updateAadharDetails);
+        app.put('/api/v1/partner/policeVerification/documents', [authJwt.verifyToken], policeVerification.single('image'), auth.updatePoliceVerificationDocuments);
+        app.put('/api/v1/partner/certificateDocument', [authJwt.verifyToken], certificateDocument.array('image'), auth.updateCertificateDocuments);
+        app.put('/api/v1/partner/updatePancardDocuments', [authJwt.verifyToken], panCardimage.single('image'), auth.updatePancardDocuments);
+        app.put('/api/v1/partner/updateBankDetails', [authJwt.verifyToken], cheque.single('image'), auth.updateBankDetails);
+        app.post("/api/v1/partner/bookings/verify", [authJwt.verifyToken], auth.approveAadharVerifyOtp);
+        app.post("/api/v1/partner/bookings/resendOtp", [authJwt.verifyToken], auth.approveAadharResendOTP);
+        app.put('/api/v1/partner/switchRole/:roleId', [authJwt.verifyToken], auth.switchRole)
+        app.get('/api/v1/partner/currentRole', [authJwt.verifyToken], auth.getCurrentRole)
 
 }

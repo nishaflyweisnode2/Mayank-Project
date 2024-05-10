@@ -199,6 +199,10 @@ var userSchema = new schema(
         isLockScreenPassword: {
             type: Boolean,
             default: false
+        },
+        currentRole: {
+            type: mongoose.Schema.ObjectId,
+            ref: 'mainCategory'
         }
     },
     { timestamps: true }

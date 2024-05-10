@@ -92,5 +92,29 @@ const storage19 = new CloudinaryStorage({
 const petImageUpload = multer({ storage: storage19 });
 const storage20 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/Breed", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF"], }, });
 const BreedUpload = multer({ storage: storage20 });
+const storage21 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/aadharCardImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
+const aadharCardImage = multer({ storage: storage21 });
+var kpUpload = aadharCardImage.fields([
+    { name: 'aadharFrontImage', maxCount: 1 },
+    { name: 'aadharBackImage', maxCount: 1 },
+]);
+const storage22 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/addressPrrof", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
+const addressPrrof = multer({ storage: storage22 });
+var kpUpload1 = addressPrrof.fields([
+    { name: 'officeAddressProof', maxCount: 1 },
+    { name: 'electricBillProof', maxCount: 1 },
+]);
+const storage23 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/carDocumentImage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
+const carDocumentImage = multer({ storage: storage23 });
+const storage24 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/panCardimage", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
+const panCardimage = multer({ storage: storage24 });
+const storage25 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/policeVerification", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
+const policeVerification = multer({ storage: storage25 });
+const storage26 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/certificateDocument", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
+const certificateDocument = multer({ storage: storage26 });
+const storage27 = new CloudinaryStorage({ cloudinary: cloudinary, params: { folder: "mayank-project/cheque", allowed_formats: ["jpg", "jpeg", "png", "PNG", "xlsx", "xls", "pdf", "PDF", "jiff", "JIFF", "jfif", "JFIF", "mp4", "MP4", "webm", "WEBM"], }, });
+const cheque = multer({ storage: storage27 });
 
-module.exports = { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, E4UUpload, userProfileUpload, offerUpload, spAgreementUpload, complaintSuggestion, testimonial, charges, serviceType, subCategory, mainCategoryBannerUpload, petImageUpload, BreedUpload };
+
+
+module.exports = { productUpload, bannerUpload, blogUpload, aboutusUpload, subCategoryUpload, categoryUpload, serviceUpload, E4UUpload, userProfileUpload, offerUpload, spAgreementUpload, complaintSuggestion, testimonial, charges, serviceType, subCategory, mainCategoryBannerUpload, petImageUpload, BreedUpload, kpUpload, addressPrrof,panCardimage, policeVerification, certificateDocument, kpUpload1, cheque };
