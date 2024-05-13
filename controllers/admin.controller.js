@@ -3753,7 +3753,7 @@ exports.getTrainingVideoById = async (req, res) => {
 
 exports.getAllReferrals = async (req, res) => {
     try {
-        const referrals = await Referral.find();
+        const referrals = await Referral.find().populate('referrer');
         return res.status(200).json({ status: 200, data: referrals });
     } catch (error) {
         console.error(error);
@@ -3764,7 +3764,7 @@ exports.getAllReferrals = async (req, res) => {
 exports.getReferralById = async (req, res) => {
     try {
         const referralId = req.params.id;
-        const referral = await Referral.findById(referralId);
+        const referral = await Referral.findById(referralId).populate('referrer');
 
         if (!referral) {
             return res.status(404).json({ status: 500, error: 'Referral not found' });
@@ -4976,7 +4976,7 @@ exports.updateSPAgreement = async (req, res) => {
 };
 exports.deleteSPAgreementById = async (req, res) => {
     try {
-    const spAgreementId = req.params.id;
+        const spAgreementId = req.params.id;
 
         const spAgreement = await SPAgreement.findById(spAgreementId);
         if (!spAgreement) {
@@ -4988,7 +4988,7 @@ exports.deleteSPAgreementById = async (req, res) => {
         return res.json({ status: 200, message: 'SP Agreement deleted successfully' });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({status: 500, error: 'Failed to delete SP Agreement' });
+        return res.status(500).json({ status: 500, error: 'Failed to delete SP Agreement' });
     }
 };
 

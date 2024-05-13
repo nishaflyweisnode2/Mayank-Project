@@ -21,14 +21,34 @@ const ConsentForm = require('../models/consentFormModel');
 const Attendance = require('../models/attendanceModel');
 const Slot = require('../models/SlotModel');
 const OnboardingDetails = require('../models/onBoardingMode');
+const qr = require('qrcode');
+const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+const ContactDetail = require("../models/ContactDetail");
+const MainCategory = require("../models/category/mainCategory");
 
 
 
+
+// Configure Cloudinary with your credentials
+cloudinary.config({
+        cloud_name: process.env.CLOUD_NAME,
+        api_key: process.env.CLOUD_KEY,
+        api_secret: process.env.CLOUD_SECRET,
+});
 const reffralCode = async () => {
         var digits = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         let OTP = '';
         for (let i = 0; i < 9; i++) {
                 OTP += digits[Math.floor(Math.random() * 36)];
+        }
+        return OTP;
+}
+const idCode = async () => {
+        var digits = "0123456789";
+        let OTP = '';
+        for (let i = 0; i < 9; i++) {
+                OTP += digits[Math.floor(Math.random() * 10)];
         }
         return OTP;
 }
@@ -209,6 +229,10 @@ exports.updateProfile = async (req, res) => {
                         if (req.file) {
                                 image = req.file.path
                         }
+                        const referralCode = await idCode();
+                        const firstName = data.fullName.trim().split(' ')[0];
+
+
                         let obj = {
                                 fullName: req.body.fullName || data.fullName,
                                 email: req.body.email || data.email,
@@ -219,7 +243,8 @@ exports.updateProfile = async (req, res) => {
                                 address1: req.body.address1 || data.address1,
                                 address2: req.body.address2 || data.address2,
                                 image: image || data.image,
-                                role: req.body.role || data.role
+                                role: req.body.role || data.role,
+                                providerCode: firstName + (await referralCode)
                         }
                         console.log(obj);
                         let update = await User.findByIdAndUpdate({ _id: data._id }, { $set: obj }, { new: true });
@@ -893,10 +918,80 @@ exports.getCurrentRole = async (req, res) => {
                 return res.status(500).json({ error: 'Internal Server Error' });
         }
 };
+exports.getIdCard = async (req, res) => {
+        try {
+                const data = await User.findOne({ _id: req.user._id }).populate('city sector currentRole occupation role');
+                if (!data) {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+                const userData = data.toJSON();
 
+                const qrCodeData = JSON.stringify(userData);
 
+                const qrCodePath = `qr_codes/user_${data._id}.png`;
+                await qr.toFile(qrCodePath, qrCodeData);
+                console.log("qrCodePath", qrCodePath);
+                const cloudinaryUploadResponse = await cloudinary.uploader.upload(qrCodePath, {
+                        folder: 'QrCode',
+                        resource_type: 'raw'
+                });
 
+                userData.qrCodePath = cloudinaryUploadResponse.secure_url;
 
+                await User.findByIdAndUpdate(data._id, { qrCodePath: userData.qrCodePath });
+
+                fs.unlinkSync(qrCodePath);
+
+                return res.status(200).json({ status: 200, message: "get IdCard", data: userData });
+        } catch (error) {
+                console.log(error);
+                return res.status(500).send({ status: 500, message: "Server error.", data: {} });
+        }
+};
+exports.viewContactDetails = async (req, res) => {
+        try {
+                let findcontactDetails = await ContactDetail.findOne();
+                if (!findcontactDetails) {
+                        return res.status(404).send({ status: 404, message: "Contact Detail not found.", data: {} });
+                } else {
+                        return res.status(200).send({ status: 200, message: "Contact Detail fetch successfully", data: findcontactDetails });
+                }
+        } catch (err) {
+                console.log(err);
+                return res.status(500).send({ status: 500, msg: "internal server error", error: err.message, });
+        }
+};
+exports.createReferral = async (req, res) => {
+        try {
+                const data = await User.findOne({ _id: req.user._id });
+                const { referredName, referredMobile, referredOccupation } = req.body;
+
+                if (!data) {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+                if (referredOccupation) {
+                        const validOccupations = await MainCategory.find({ _id: { $in: referredOccupation } });
+                        if (validOccupations.length !== referredOccupation.length) {
+                                return res.status(400).json({ status: 400, message: "Invalid referredOccupation IDs" });
+                        }
+                }
+
+                const referral = new Referral({
+                        referrer: data._id,
+                        referredName,
+                        referredMobile,
+                        referredOccupation,
+
+                });
+
+                const savedReferral = await referral.save();
+
+                res.status(201).json({ success: true, message: 'Referral created successfully', data: savedReferral });
+        } catch (error) {
+                console.error(error);
+                res.status(500).json({ success: false, message: 'Failed to create referral' });
+        }
+};
 
 
 
@@ -1133,26 +1228,6 @@ exports.getAllComplaintSuggestions = async (req, res) => {
         }
 };
 
-exports.createReferral = async (req, res) => {
-        try {
-                const { name, mobileNumber, city, hub, address } = req.body;
-
-                const referral = new Referral({
-                        name,
-                        mobileNumber,
-                        city,
-                        hub,
-                        address
-                });
-
-                const savedReferral = await referral.save();
-
-                res.status(201).json({ success: true, message: 'Referral created successfully', data: savedReferral });
-        } catch (error) {
-                console.error(error);
-                res.status(500).json({ success: false, message: 'Failed to create referral' });
-        }
-};
 exports.createConsentForm = async (req, res) => {
         try {
                 const { title, description } = req.body;

@@ -203,7 +203,9 @@ var userSchema = new schema(
         currentRole: {
             type: mongoose.Schema.ObjectId,
             ref: 'mainCategory'
-        }
+        },
+        providerCode: { type: String, },
+        qrCodePath: { type: String, },
     },
     { timestamps: true }
 );

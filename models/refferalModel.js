@@ -2,37 +2,24 @@ const mongoose = require('mongoose');
 
 
 const referralSchema = new mongoose.Schema({
-    // referredBy: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: 'User',
-    //     required: true
-    // },
-    // referredUser: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: 'User',
-    //     required: true
-    // },
-    name: {
+    referrer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'user',
+        required: true
+    },
+    referredName: {
         type: String,
         required: true
     },
-    mobileNumber: {
+    referredMobile: {
         type: String,
         required: true
     },
-    city: {
-        type: String,
-        required: true
-    },
-    hub: {
-        type: String,
-        required: true
-    },
-    address: {
-        type: String,
-        required: true
-    },
-    createdAt: {
+    referredOccupation: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'mainCategory',
+    }],
+    referredAt: {
         type: Date,
         default: Date.now
     }
