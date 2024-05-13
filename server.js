@@ -15,7 +15,7 @@ if (process.env.NODE_ENV == "production") {
     console.log = function () { };
 }
 app.get("/", (req, res) => {
-    res.send("Hello World!");
+    res.send("Hello Mayank Project!");
 });
 require('./routes/user.route')(app);
 require('./routes/admin.route')(app);
