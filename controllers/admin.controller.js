@@ -45,6 +45,7 @@ const ProximityScore = require('../models/proximityScoreModel');
 const ServiceableAreaRadius = require('../models/serviceableRadiusModel');
 const ExperienceScore = require('../models/experienceScoreModel');
 const Size = require('../models/sizeModel');
+const Improve = require('../models/howToImproveModel');
 
 
 
@@ -4991,4 +4992,61 @@ exports.deleteSPAgreementById = async (req, res) => {
         return res.status(500).json({ status: 500, error: 'Failed to delete SP Agreement' });
     }
 };
-
+exports.createImprove = async (req, res) => {
+    try {
+        const improve = new Improve(req.body);
+        await improve.save();
+        return res.status(201).json({ status: 201, data: improve });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error' });
+    }
+};
+exports.getAllImprove = async (req, res) => {
+    try {
+        const improves = await Improve.find();
+        return res.status(200).json({ status: 200, data: improves });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error' });
+    }
+};
+exports.getImproveById = async (req, res) => {
+    try {
+        const improve = await Improve.findById(req.params.id);
+        if (!improve) {
+            return res.status(404).json({ status: 404, message: 'Improve data not found' });
+        }
+        return res.status(200).json({ status: 200, data: improve });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error' });
+    }
+};
+exports.updateImprove = async (req, res) => {
+    try {
+        const improve = await Improve.findByIdAndUpdate(req.params.id, req.body, {
+            new: true,
+            runValidators: true
+        });
+        if (!improve) {
+            return res.status(404).json({ status: 404, message: 'Improve data not found' });
+        }
+        return res.status(200).json({ status: 200, data: improve });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error' });
+    }
+};
+exports.deleteImprove = async (req, res) => {
+    try {
+        const improve = await Improve.findByIdAndDelete(req.params.id);
+        if (!improve) {
+            return res.status(404).json({ status: 'fail', message: 'Improve data not found' });
+        }
+        return res.status(204).json({ status: 204, data: null });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error' });
+    }
+};

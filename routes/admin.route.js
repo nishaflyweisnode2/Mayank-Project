@@ -199,6 +199,11 @@ module.exports = (app) => {
                 { name: 'panCardImage', maxCount: 1 }
         ]), auth.updateSPAgreement);
         app.delete('/api/v1/admin/partner-sp-agreements/:id', authJwt.verifyToken, auth.deleteSPAgreementById);
+        app.post('/api/v1/admin/improves', authJwt.verifyToken, auth.createImprove);
+        app.get('/api/v1/admin/improves', authJwt.verifyToken, auth.getAllImprove);
+        app.get('/api/v1/admin/improves/:id', authJwt.verifyToken, auth.getImproveById);
+        app.put('/api/v1/admin/improves/:id', authJwt.verifyToken, auth.updateImprove);
+        app.delete('/api/v1/admin/improves/:id', authJwt.verifyToken, auth.deleteImprove);
 
 
 
