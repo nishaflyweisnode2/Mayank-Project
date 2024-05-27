@@ -168,7 +168,7 @@ const DocumentSchema = Schema({
                         },
                         packageType: {
                                 type: String,
-                                enum: ['Essential', 'Standard', 'Pro']
+                                enum: ['Multi-Pack', 'Essential', 'Standard', 'Pro']
                         },
                         services: [{
                                 serviceId: {
@@ -230,9 +230,9 @@ const DocumentSchema = Schema({
                 enum: ["Pending", "Paid", "Failed"],
                 default: "Pending"
         },
-        breed: {
+        size: {
                 type: Schema.Types.ObjectId,
-                ref: 'Breed',
+                ref: 'Size',
         },
         pets: {
                 type: Schema.Types.ObjectId,

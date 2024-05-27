@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
 const attendanceSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'user',
+    },
+    mainCategoryId: {
+        type: Schema.Types.ObjectId,
+        ref: 'mainCategory'
     },
     date: {
         type: Date,
@@ -28,7 +33,11 @@ const attendanceSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    
+    totalBookedUsers: {
+        type: Number,
+        default: 0,
+    },
+
 }, { timestamps: true });
 
 const Attendance = mongoose.model('Attendance', attendanceSchema);

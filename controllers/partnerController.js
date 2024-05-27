@@ -26,6 +26,8 @@ const fs = require('fs');
 const cloudinary = require('cloudinary').v2;
 const ContactDetail = require("../models/ContactDetail");
 const MainCategory = require("../models/category/mainCategory");
+const Team = require('../models/teamModel');
+const ApprovalRequest = require('../models/teamApprovalModel');
 
 
 
@@ -465,7 +467,7 @@ async function createAttendanceRecord() {
                 const todayDate = new Date().toISOString().split('T')[0];
 
                 for (const userData of usersData) {
-                        const existingRecord = await Attendance.findOne({ userId: userData._id, date: todayDate });
+                        const existingRecord = await Attendance.findOne({ userId: userData._id, date: todayDate, mainCategoryId: userData.currentRole });
                         if (existingRecord) {
                                 console.log(`Attendance record already exists for user ${userData._id}`);
                                 continue;
@@ -474,6 +476,7 @@ async function createAttendanceRecord() {
                         const slots = await Slot.find();
                         const attendanceRecord = new Attendance({
                                 userId: userData._id,
+                                mainCategoryId: userData.currentRole,
                                 date: todayDate,
                                 timeSlots: slots.map(slot => ({
                                         startTime: slot.timeFrom,
@@ -990,6 +993,253 @@ exports.createReferral = async (req, res) => {
         } catch (error) {
                 console.error(error);
                 res.status(500).json({ success: false, message: 'Failed to create referral' });
+        }
+};
+exports.createTeam = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { name, teamMemberIds } = req.body;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "User not found", data: {} });
+                }
+
+                const existingTeams = await Team.countDocuments({ teamLeader: userId });
+                if (existingTeams >= 3) {
+                        return res.status(400).json({ status: 400, message: "You can only create up to three teams.", data: {} });
+                }
+
+                if (teamMemberIds.length > 3) {
+                        return res.status(400).json({ status: 400, message: "You can only add up to three members per team.", data: {} });
+                }
+
+                const team = new Team({
+                        name,
+                        teamLeader: userId,
+                        teamMembers: []
+                });
+
+                await team.save();
+
+                for (const memberId of teamMemberIds) {
+                        const approvalRequest = new ApprovalRequest({
+                                teamId: team._id,
+                                requesterId: userId,
+                                memberId: memberId
+                        });
+                        await approvalRequest.save();
+                }
+
+                return res.status(201).json({ status: 201, message: 'Team created successfully. Approval requests sent.', data: team });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.getAllTeams = async (req, res) => {
+        try {
+                const userId = req.user._id
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+
+                const teams = await Team.find({ teamLeader: userId }).populate('teamLeader').populate('teamMembers');
+
+                return res.status(200).json({ status: 200, data: teams });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.getTeamsById = async (req, res) => {
+        try {
+                const { id } = req.params;
+
+                const teams = await Team.findById(id).populate('teamLeader').populate('teamMembers');
+                return res.status(200).json({ status: 200, data: teams });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.updateTeam = async (req, res) => {
+        try {
+                const { id } = req.params;
+                const userId = req.user._id
+
+                const { name, teamMemberIds } = req.body;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+
+                const team = await Team.findById(id);
+                if (!team) {
+                        return res.status(404).json({ status: 'error', message: 'Team not found' });
+                }
+
+                team.teamLeader = userId;
+
+                if (teamMemberIds) {
+                        const teamMembers = await User.find({ _id: { $in: teamMemberIds } });
+                        team.teamMembers = teamMembers.map(member => member._id);
+                }
+
+                if (name) {
+                        team.name = name;
+                }
+
+                await team.save();
+                return res.status(200).json({ status: 200, message: 'Team updated successfully', data: team });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.deleteTeam = async (req, res) => {
+        try {
+                const { id } = req.params;
+                const team = await Team.findByIdAndDelete(id);
+                if (!team) {
+                        return res.status(404).json({ status: 'error', message: 'Team not found' });
+                }
+                return res.status(200).json({ status: 200, message: 'Team deleted successfully' });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.addTeamMember = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { teamId, memberId } = req.body;
+
+                const team = await Team.findOne({ _id: teamId, teamLeader: userId });
+
+                if (!team) {
+                        return res.status(404).json({ status: 404, message: "Team not found or you are not authorized to edit this team.", data: {} });
+                }
+
+                const member = await User.findById(memberId);
+                if (!member) {
+                        return res.status(404).json({ status: 404, message: "User to be added not found.", data: {} });
+                }
+
+                if (team.teamMembers.includes(memberId)) {
+                        return res.status(400).json({ status: 400, message: "User is already a team member.", data: {} });
+                }
+
+                if (team.teamMembers.length >= 3) {
+                        return res.status(400).json({ status: 400, message: "You can only add up to three members per team.", data: {} });
+                }
+
+                const approvalRequest = new ApprovalRequest({
+                        teamId: team._id,
+                        requesterId: userId,
+                        memberId: memberId,
+                        status: 'Pending'
+                });
+                await approvalRequest.save();
+
+                return res.status(200).json({ status: 200, message: 'Approval request sent successfully', data: approvalRequest });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.removeTeamMember = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { teamId, memberId } = req.body;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+
+                const team = await Team.findOne({ _id: teamId, teamLeader: userId });
+
+                if (!team) {
+                        return res.status(404).json({ status: 404, message: "Team not found or you are not authorized to edit this team.", data: {} });
+                }
+
+                team.teamMembers = team.teamMembers.filter(member => member.toString() !== memberId);
+
+                await team.save();
+
+                return res.status(200).json({ status: 200, message: 'Team member removed successfully', data: team });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.getApprovalRequestsByUser = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "User not found", data: {} });
+                }
+
+                const approvalRequests = await ApprovalRequest.find({ memberId: userId, status: 'Pending' })
+                        .populate('teamId', 'name')
+                        .populate('requesterId', 'name');
+
+                if (!approvalRequests.length) {
+                        return res.status(404).json({ status: 404, message: "No pending approval requests found", data: [] });
+                }
+
+                return res.status(200).json({ status: 200, message: 'Pending approval requests retrieved successfully', data: approvalRequests });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.acceptApprovalRequest = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { requestId } = req.body;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "User not found", data: {} });
+                }
+
+                const approvalRequest = await ApprovalRequest.findOne({ _id: requestId, memberId: userId });
+                if (!approvalRequest) {
+                        return res.status(404).json({ status: 404, message: "Approval request not found", data: {} });
+                }
+
+                approvalRequest.status = 'Accepted';
+                await approvalRequest.save();
+
+                const team = await Team.findById(approvalRequest.teamId);
+                team.teamMembers.push(userId);
+                await team.save();
+
+                return res.status(200).json({ status: 200, message: 'Approval request accepted. You have been added to the team.', data: team });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
+        }
+};
+exports.declineApprovalRequest = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const { requestId } = req.body;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "User not found", data: {} });
+                }
+
+                const approvalRequest = await ApprovalRequest.findOne({ _id: requestId, memberId: userId });
+                if (!approvalRequest) {
+                        return res.status(404).json({ status: 404, message: "Approval request not found", data: {} });
+                }
+
+                approvalRequest.status = 'Declined';
+                await approvalRequest.save();
+
+                return res.status(200).json({ status: 200, message: 'Approval request declined.', data: {} });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: error.message });
         }
 };
 

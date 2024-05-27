@@ -4431,6 +4431,13 @@ exports.deleteSlotById = async (req, res) => {
 exports.createBreedScore = async (req, res) => {
     try {
         const { breedSize, score } = req.body;
+
+        if (breedSize) {
+            const size = await Size.findById(breedSize);
+            if (!size) {
+                return res.status(404).json({ message: 'Size not found' });
+            }
+        }
         const newBreedScore = await BreedScore.create({ breedSize, score });
         return res.status(201).json({ status: 201, message: 'Breed score created successfully.', data: newBreedScore });
     } catch (error) {
@@ -4440,7 +4447,7 @@ exports.createBreedScore = async (req, res) => {
 
 exports.getAllBreedScores = async (req, res) => {
     try {
-        const breedScores = await BreedScore.find();
+        const breedScores = await BreedScore.find().populate('breedSize');
         return res.status(200).json({ status: 200, message: 'Breed scores retrieved successfully.', data: breedScores });
     } catch (error) {
         return res.status(500).json({ status: 500, message: 'Failed to retrieve breed scores.', error: error.message });
@@ -4449,7 +4456,7 @@ exports.getAllBreedScores = async (req, res) => {
 
 exports.getBreedScoreById = async (req, res) => {
     try {
-        const breedScore = await BreedScore.findById(req.params.id);
+        const breedScore = await BreedScore.findById(req.params.id).populate('breedSize');
         if (!breedScore) {
             return res.status(404).json({ status: 404, message: 'Breed score not found.' });
         }
@@ -4462,6 +4469,14 @@ exports.getBreedScoreById = async (req, res) => {
 exports.updateBreedScoreById = async (req, res) => {
     try {
         const { breedSize, score } = req.body;
+
+        if (breedSize) {
+            const size = await Size.findById(breedSize);
+            if (!size) {
+                return res.status(404).json({ message: 'Size not found' });
+            }
+        }
+
         const updatedBreedScore = await BreedScore.findByIdAndUpdate(req.params.id, { breedSize, score }, { new: true });
         if (!updatedBreedScore) {
             return res.status(404).json({ status: 404, message: 'Breed score not found.' });

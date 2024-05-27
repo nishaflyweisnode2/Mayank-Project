@@ -1,9 +1,11 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
 
 const breedScoreSchema = new mongoose.Schema({
     breedSize: {
-        type: String,
-        enum: ['Small', 'Medium', 'Large', 'Extra-Large']
+        type: Schema.Types.ObjectId,
+        ref: 'Size',
     },
     score: {
         type: Number,

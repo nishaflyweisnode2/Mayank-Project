@@ -73,5 +73,17 @@ module.exports = (app) => {
         app.get('/api/v1/partner/currentRole', [authJwt.verifyToken], auth.getCurrentRole)
         app.get("/api/v1/partner/getIdCard", [authJwt.verifyToken], auth.getIdCard);
         app.get("/api/v1/partner/viewContactDetails", [authJwt.verifyToken], auth.viewContactDetails);
+        app.post('/api/v1/partner/teams/add', [authJwt.verifyToken], auth.createTeam);
+        app.get('/api/v1/partner/teams', [authJwt.verifyToken], auth.getAllTeams);
+        app.get('/api/v1/partner/teams/:id', [authJwt.verifyToken], auth.getTeamsById);
+        app.put('/api/v1/partner/teams/:id', [authJwt.verifyToken], auth.updateTeam);
+        app.delete('/api/v1/partner/teams/:id', [authJwt.verifyToken], auth.deleteTeam);
+        app.post('/api/v1/partner/teams/add/member', [authJwt.verifyToken], auth.addTeamMember);
+        app.delete('/api/v1/partner/teams/remove/member', [authJwt.verifyToken], auth.removeTeamMember);
+        app.get('/api/v1/partner/teams/approval/request', [authJwt.verifyToken], auth.getApprovalRequestsByUser);
+        app.post('/api/v1/partner/teams/approval/accept', [authJwt.verifyToken], auth.acceptApprovalRequest);
+        app.post('/api/v1/partner/teams/approval/decline', [authJwt.verifyToken], auth.declineApprovalRequest);
+
+
 
 }

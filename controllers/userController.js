@@ -33,6 +33,7 @@ const Slot = require('../models/SlotModel');
 const moment = require('moment');
 const Pet = require('../models/petModel');
 const Breed = require('../models/breedModel');
+const Attendance = require('../models/attendanceModel');
 
 
 
@@ -267,7 +268,6 @@ exports.updateLocation1 = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.updateLocation = async (req, res) => {
         try {
                 const user = await User.findOne({ _id: req.user._id });
@@ -311,7 +311,6 @@ exports.updateLocation = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.createAddress = async (req, res, next) => {
         try {
                 const data = await User.findOne({ _id: req.user._id, });
@@ -1644,8 +1643,12 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                 if (!userData || !userData.city /*|| !userData.sector*/) {
                         return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
                 }
-
-                const findPet = await Pet.findOne({ user: userData._id });
+                let findPet;
+                if (req.body.pets) {
+                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                } else {
+                        findPet = await Pet.findOne({ user: userData._id }).populate('breed');
+                }
                 const findCart = await Cart.findOne({ userId: userData._id });
                 const findService = await service.findById({ _id: req.body._id, isAddOnServices: true });
                 // console.log("findPet", findPet);
@@ -1733,6 +1736,13 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                                 }
                         }
 
+                        const breed = await Breed.findOne({ _id: findPet.breed });
+                        if (!breed) {
+                                return res.status(404).json({ status: 404, message: 'Breed not found' });
+                        }
+
+                        const size = breed.size;
+
                         let obj = {
                                 userId: userData._id,
                                 Charges: Charged,
@@ -1749,7 +1759,7 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
-                                size: findPet.size,
+                                size: size,
                                 pets: findPet._id,
                         };
 
@@ -1917,7 +1927,12 @@ exports.addToCartPackageEssential = async (req, res) => {
                 let findCart = await Cart.findOne({ userId });
                 const packageId = req.body.packageId;
 
-                const findPet = await Pet.findOne({ user: userData._id });
+                let findPet;
+                if (req.body.pets) {
+                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                } else {
+                        findPet = await Pet.findOne({ user: userData._id }).populate('breed');
+                }
                 const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage || !findPackage.packageType) {
@@ -1976,9 +1991,14 @@ exports.addToCartPackageEssential = async (req, res) => {
                         price: price,
                         quantity: quantity,
                         total: totalAmount,
-                        size: findPet.size,
-                        pets: findPet._id,
                 };
+
+                const breed = await Breed.findOne({ _id: findPet.breed });
+                if (!breed) {
+                        return res.status(404).json({ status: 404, message: 'Breed not found' });
+                }
+
+                const size = breed.size;
 
                 if (!findCart) {
                         const obj = {
@@ -1989,6 +2009,8 @@ exports.addToCartPackageEssential = async (req, res) => {
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
+                                size: size,
+                                pets: findPet._id,
                         };
 
                         findCart = await Cart.create(obj);
@@ -2025,7 +2047,13 @@ exports.addToCartPackageStandard = async (req, res) => {
                 const findCart = await Cart.findOne({ userId });
                 const packageId = req.body.packageId;
 
-                const findPet = await Pet.findOne({ user: userData._id });
+                let findPet;
+                if (req.body.pets) {
+                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                } else {
+                        findPet = await Pet.findOne({ user: userData._id }).populate('breed');
+                }
+
                 const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage || !findPackage.packageType) {
@@ -2082,9 +2110,14 @@ exports.addToCartPackageStandard = async (req, res) => {
                         price: price,
                         quantity: quantity,
                         total: totalAmount,
-                        size: findPet.size,
-                        pets: findPet._id,
                 };
+
+                const breed = await Breed.findOne({ _id: findPet.breed });
+                if (!breed) {
+                        return res.status(404).json({ status: 404, message: 'Breed not found' });
+                }
+
+                const size = breed.size;
 
                 if (findCart) {
                         findCart.packages.push(newPackage);
@@ -2103,6 +2136,8 @@ exports.addToCartPackageStandard = async (req, res) => {
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
+                                size: size,
+                                pets: findPet._id,
                         };
 
                         const newCart = await Cart.create(obj);
@@ -2124,7 +2159,13 @@ exports.addToCartPackagePro = async (req, res) => {
                 const findCart = await Cart.findOne({ userId });
                 const packageId = req.body.packageId;
 
-                const findPet = await Pet.findOne({ user: userData._id });
+                let findPet;
+                if (req.body.pets) {
+                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                } else {
+                        findPet = await Pet.findOne({ user: userData._id }).populate('breed');
+                }
+
                 const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage || !findPackage.packageType) {
@@ -2181,9 +2222,14 @@ exports.addToCartPackagePro = async (req, res) => {
                         price: price,
                         quantity: quantity,
                         total: totalAmount,
-                        size: findPet.size,
-                        pets: findPet._id,
                 };
+
+                const breed = await Breed.findOne({ _id: findPet.breed });
+                if (!breed) {
+                        return res.status(404).json({ status: 404, message: 'Breed not found' });
+                }
+
+                const size = breed.size;
 
                 if (findCart) {
                         findCart.packages.push(newPackage);
@@ -2202,6 +2248,8 @@ exports.addToCartPackagePro = async (req, res) => {
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
+                                size: size,
+                                pets: findPet._id,
                         };
 
                         const newCart = await Cart.create(obj);
@@ -3675,6 +3723,8 @@ exports.checkout = async (req, res) => {
                                         additionalFee: findCart.additionalFee,
                                         paidAmount: findCart.paidAmount,
                                         totalItem: findCart.totalItem,
+                                        pets: findCart.pets,
+                                        size: findCart.size,
                                         orderStatus: "Unconfirmed",
                                         serviceStatus: "Pending",
                                         status: "Pending",
@@ -3699,7 +3749,7 @@ exports.placeOrder = async (req, res) => {
                 let findUserOrder = await orderModel.findOne({ orderId: req.params.orderId });
                 if (findUserOrder) {
                         if (req.body.paymentStatus == "Paid") {
-                                let update = await orderModel.findByIdAndUpdate({ _id: findUserOrder._id }, { $set: { orderStatus: "Confirmed", status: "confirmed", paymentStatus: "Paid" } }, { new: true });
+                                let update = await orderModel.findByIdAndUpdate({ _id: findUserOrder._id }, { $set: { orderStatus: "Confirmed", status: "Confirmed", paymentStatus: "Paid" } }, { new: true });
 
                                 await Cart.deleteOne({ userId: findUserOrder.userId });
 
@@ -4725,14 +4775,195 @@ exports.getIssueReports = async (req, res) => {
         }
 };
 
-exports.getAllSlots = async (req, res) => {
+exports.getAllSlots1 = async (req, res) => {
         try {
-                const slots = await Slot.find();
+                const userId = req.user._id;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "User not found", data: {} });
+                }
+
+                const findCart = await Cart.findOne({ userId }).populate('packages.packageId');
+                if (!findCart) {
+                        return res.status(404).json({ status: 404, message: "Cart not found for this user." });
+                }
+
+                let mainCategories;
+                if (findCart.packages && findCart.packages.length > 0) {
+                        mainCategories = findCart.packages.map(pkg => pkg.packageId.mainCategoryId);
+                } else if (findCart.services && findCart.services.length > 0) {
+                        mainCategories = findCart.services.map(service => service.serviceId.mainCategoryId);
+                } else {
+                        return res.status(404).json({ status: 404, message: "No packages or services found in the cart." });
+                }
+
+                const attendances = await Attendance.find({ mainCategoryId: { $in: mainCategories } });
+
+                if (!attendances || attendances.length === 0) {
+                        return res.status(403).json({ status: 403, message: "Attendance not marked for this partner user", data: {} });
+                }
+                console.log("attendances", attendances);
+
+                const slots = await Slot.find({ mainCategory: { $in: mainCategories } });
+                const categorizedSlots = {};
+
+                mainCategories.forEach(category => {
+                        const categoryObjectId = new mongoose.Types.ObjectId(category);
+                        const filteredSlots = slots.filter(slot => slot.mainCategory.equals(categoryObjectId));
+
+                        const availableSlots = filteredSlots.filter(slot => {
+                                const attendance = attendances.find(att => att.mainCategoryId.equals(categoryObjectId));
+
+                                if (attendance && attendance.timeSlots) {
+                                        const isTimeSlotAvailable = attendance.timeSlots.some(timeSlot => {
+                                                return timeSlot.available && timeSlot.startTime <= slot.timeFrom && timeSlot.endTime >= slot.timeTo;
+                                        });
+
+                                        const isJobAcceptable = slot.jobAcceptance !== slot.totalBookedUsers;
+
+                                        return isTimeSlotAvailable && isJobAcceptable;
+                                }
+                                return false;
+                        });
+                        console.log("availableSlots", availableSlots);
+
+                        categorizedSlots[category] = availableSlots;
+                });
 
                 return res.status(200).json({
                         status: 200,
                         message: 'Slots retrieved successfully.',
-                        data: slots,
+                        data: categorizedSlots,
+                });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({
+                        status: 500,
+                        message: 'Internal server error',
+                        data: error.message,
+                });
+        }
+};
+exports.getAllSlots = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "User not found", data: {} });
+                }
+
+                const findCart = await Cart.findOne({ userId }).populate('packages.packageId')
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.services',
+                                populate: {
+                                        path: 'serviceId',
+                                        model: 'Service'
+                                }
+                        })
+                if (!findCart) {
+                        return res.status(404).json({ status: 404, message: "Cart not found for this user." });
+                }
+
+                let mainCategories;
+                if (findCart.packages && findCart.packages.length > 0) {
+                        mainCategories = findCart.packages.map(pkg => pkg.packageId.mainCategoryId);
+                } else if (findCart.services && findCart.services.length > 0) {
+                        mainCategories = findCart.services.map(service => service.serviceId.mainCategoryId);
+                } else {
+                        return res.status(404).json({ status: 404, message: "No packages or services found in the cart." });
+                }
+
+                const attendances = await Attendance.find({ mainCategoryId: { $in: mainCategories } });
+
+                if (!attendances || attendances.length === 0) {
+                        return res.status(403).json({ status: 403, message: "Attendance not marked for this partner user", data: {} });
+                }
+
+                const slots = await Slot.find({ mainCategory: { $in: mainCategories } });
+                const categorizedSlots = {};
+
+                mainCategories.forEach(category => {
+                        const categoryObjectId = new mongoose.Types.ObjectId(category);
+                        const filteredSlots = slots.filter(slot => slot.mainCategory.equals(categoryObjectId));
+
+                        const availableSlots = filteredSlots.filter(slot => {
+                                const relevantAttendances = attendances.filter(att => att.mainCategoryId.equals(categoryObjectId));
+
+                                const isSlotAvailable = relevantAttendances.some(attendance => {
+                                        if (attendance.timeSlots) {
+                                                const isTimeSlotAvailable = attendance.timeSlots.some(timeSlot => {
+                                                        return timeSlot.available && timeSlot.startTime <= slot.timeFrom && timeSlot.endTime >= slot.timeTo;
+                                                });
+
+                                                const isJobAcceptable = slot.jobAcceptance !== slot.totalBookedUsers;
+
+                                                return isTimeSlotAvailable && isJobAcceptable;
+                                        }
+                                        return false;
+                                });
+
+                                return isSlotAvailable;
+                        });
+
+                        console.log("availableSlots", availableSlots);
+                        categorizedSlots[category] = availableSlots;
+
+                });
+
+                return res.status(200).json({
+                        status: 200,
+                        message: 'Slots retrieved successfully.',
+                        data: categorizedSlots,
                 });
         } catch (error) {
                 console.error(error);
@@ -5207,3 +5438,155 @@ exports.getBreedByMainCategoryId = async (req, res) => {
                 return res.status(500).json({ status: 500, message: error.message });
         }
 };
+
+async function assignOrderToPartner() {
+        try {
+                const orders = await Order.find({ partnerId: { $exists: false } }).populate('packages.packageId')
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.services',
+                                populate: {
+                                        path: 'serviceId',
+                                        model: 'Service'
+                                }
+                        });
+                if (!orders.length) {
+                        console.log("No unassigned orders found");
+                        return;
+                }
+
+                const availablePartners = await User.find({ userType: "PARTNER" });
+                if (!availablePartners.length) {
+                        console.log("No available partners found");
+                        return;
+                }
+
+                const partnerIds = availablePartners.map(partner => partner._id);
+
+                for (const order of orders) {
+                        let mainCategories;
+                        if (order.packages && order.packages.length > 0) {
+                                mainCategories = order.packages.map(pkg => pkg.packageId.mainCategoryId);
+                        } else if (order.services && order.services.length > 0) {
+                                mainCategories = order.services.map(service => service.serviceId.mainCategoryId);
+                        } else {
+                                console.log(`No packages or services found for order ${order._id}`);
+                                continue;
+                        }
+
+                        const attendances = await Attendance.find({
+                                mainCategoryId: { $in: mainCategories },
+                                userId: { $in: partnerIds }
+                        });
+
+                        console.log("attendances", attendances);
+
+                        if (!attendances.length) {
+                                console.log(`Attendance not marked for main categories in order ${order._id}`);
+                                continue;
+                        }
+
+                        const slots = await Slot.find({ mainCategory: { $in: mainCategories } });
+                        const categorizedSlots = {};
+
+                        mainCategories.forEach(category => {
+                                const categoryObjectId = new mongoose.Types.ObjectId(category);
+                                const filteredSlots = slots.filter(slot => slot.mainCategory.equals(categoryObjectId));
+
+                                const availableSlots = filteredSlots.filter(slot => {
+                                        const relevantAttendances = attendances.filter(att => att.mainCategoryId.equals(categoryObjectId));
+
+                                        const isSlotAvailable = relevantAttendances.some(attendance => {
+                                                if (attendance.timeSlots) {
+                                                        const isTimeSlotAvailable = attendance.timeSlots.some(timeSlot => {
+                                                                return timeSlot.available && timeSlot.startTime <= slot.timeFrom && timeSlot.endTime >= slot.timeTo;
+                                                        });
+
+                                                        const isJobAcceptable = slot.jobAcceptance !== slot.totalBookedUsers;
+
+                                                        return isTimeSlotAvailable && isJobAcceptable;
+                                                }
+                                                return false;
+                                        });
+
+                                        return isSlotAvailable;
+                                });
+
+                                console.log("availableSlots", availableSlots);
+                                categorizedSlots[category] = availableSlots;
+                        });
+
+                        for (const partner of availablePartners) {
+                                const partnerAttendance = attendances.find(att => att.userId.equals(partner._id));
+                                if (partnerAttendance) {
+                                        order.partnerId = partner._id;
+                                        await order.save();
+                                        console.log(`Order ${order._id} assigned to partner ${partner._id} successfully.`);
+                                        break;
+                                }
+                        }
+                }
+        } catch (error) {
+                console.error("Error assigning order to partner:", error);
+        }
+}
+const intervalMinutes = 15;
+const intervalMilliseconds = intervalMinutes * 60 * 1000;
+const startInterval = () => {
+        console.log(`Starting interval to assign orders to partners every ${intervalMinutes} minute(s).`);
+        setInterval(async () => {
+                console.log('Fetching orders and assigning partners...');
+                await assignOrderToPartner();
+        }, intervalMilliseconds);
+};
+
+startInterval();
+
+
