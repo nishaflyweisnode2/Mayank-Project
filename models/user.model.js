@@ -206,6 +206,10 @@ var userSchema = new schema(
         },
         providerCode: { type: String, },
         qrCodePath: { type: String, },
+        transportation: {
+            type: String,
+            enum: ['Walking', 'Bicycle', '2 Wheeler'],
+        }
     },
     { timestamps: true }
 );

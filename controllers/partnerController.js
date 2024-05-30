@@ -246,6 +246,7 @@ exports.updateProfile = async (req, res) => {
                                 address2: req.body.address2 || data.address2,
                                 image: image || data.image,
                                 role: req.body.role || data.role,
+                                transportation: req.body.transportation || data.transportation,
                                 providerCode: firstName + (await referralCode)
                         }
                         console.log(obj);

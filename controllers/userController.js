@@ -34,6 +34,7 @@ const moment = require('moment');
 const Pet = require('../models/petModel');
 const Breed = require('../models/breedModel');
 const Attendance = require('../models/attendanceModel');
+const ServiceableAreaRadius = require('../models/serviceableRadiusModel');
 
 
 
@@ -206,9 +207,11 @@ exports.updateProfile = async (req, res) => {
                                 dob: req.body.dob || data.dob,
                                 address1: req.body.address1 || data.address1,
                                 address2: req.body.address2 || data.address2,
+                                transportation: req.body.transportation || data.transportation,
                                 image: image || data.image
                         }
                         console.log(obj);
+                        console.log(req.body);
                         let update = await User.findByIdAndUpdate({ _id: data._id }, { $set: obj }, { new: true });
                         if (update) {
                                 return res.status(200).json({ status: 200, message: "Update profile successfully.", data: update });
@@ -5439,6 +5442,24 @@ exports.getBreedByMainCategoryId = async (req, res) => {
         }
 };
 
+function haversineDistance(coords1, coords2) {
+        const toRad = (x) => x * Math.PI / 180;
+
+        const lat1 = coords1[1];
+        const lon1 = coords1[0];
+        const lat2 = coords2[1];
+        const lon2 = coords2[0];
+
+        const R = 6371;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+}
+
 async function assignOrderToPartner() {
         try {
                 const orders = await Order.find({ partnerId: { $exists: false } }).populate('packages.packageId')
@@ -5496,7 +5517,8 @@ async function assignOrderToPartner() {
                                         path: 'serviceId',
                                         model: 'Service'
                                 }
-                        });
+                        }).populate('userId');
+
                 if (!orders.length) {
                         console.log("No unassigned orders found");
                         return;
@@ -5510,8 +5532,17 @@ async function assignOrderToPartner() {
 
                 const partnerIds = availablePartners.map(partner => partner._id);
 
+                const distanceCriteria = await ServiceableAreaRadius.find();
+                if (!distanceCriteria || !distanceCriteria.length) {
+                        console.error('Serviceable area radius not found');
+                        return;
+                }
+
                 for (const order of orders) {
                         let mainCategories;
+                        let orderLocation = order.userId.currentLocation.coordinates;
+                        // console.log("orderLocation", orderLocation);
+
                         if (order.packages && order.packages.length > 0) {
                                 mainCategories = order.packages.map(pkg => pkg.packageId.mainCategoryId);
                         } else if (order.services && order.services.length > 0) {
@@ -5526,7 +5557,7 @@ async function assignOrderToPartner() {
                                 userId: { $in: partnerIds }
                         });
 
-                        console.log("attendances", attendances);
+                        // console.log("attendances", attendances);
 
                         if (!attendances.length) {
                                 console.log(`Attendance not marked for main categories in order ${order._id}`);
@@ -5544,14 +5575,21 @@ async function assignOrderToPartner() {
                                         const relevantAttendances = attendances.filter(att => att.mainCategoryId.equals(categoryObjectId));
 
                                         const isSlotAvailable = relevantAttendances.some(attendance => {
-                                                if (attendance.timeSlots) {
-                                                        const isTimeSlotAvailable = attendance.timeSlots.some(timeSlot => {
-                                                                return timeSlot.available && timeSlot.startTime <= slot.timeFrom && timeSlot.endTime >= slot.timeTo;
-                                                        });
+                                                if (attendance.date && order.Date && attendance.date.toISOString().split('T')[0] === order.Date.toISOString().split('T')[0]) {
 
-                                                        const isJobAcceptable = slot.jobAcceptance !== slot.totalBookedUsers;
+                                                        if (attendance.timeSlots) {
+                                                                const isTimeSlotAvailable = attendance.timeSlots.some(timeSlot => {
+                                                                        return timeSlot.available &&
+                                                                                timeSlot.startTime <= slot.timeFrom &&
+                                                                                timeSlot.endTime >= slot.timeTo &&
+                                                                                timeSlot.startTime === order.startTime &&
+                                                                                timeSlot.endTime === order.endTime;
+                                                                });
 
-                                                        return isTimeSlotAvailable && isJobAcceptable;
+                                                                const isJobAcceptable = slot.jobAcceptance !== slot.totalBookedUsers;
+
+                                                                return isTimeSlotAvailable && isJobAcceptable;
+                                                        }
                                                 }
                                                 return false;
                                         });
@@ -5559,26 +5597,46 @@ async function assignOrderToPartner() {
                                         return isSlotAvailable;
                                 });
 
-                                console.log("availableSlots", availableSlots);
+                                // console.log("availableSlots", availableSlots);
                                 categorizedSlots[category] = availableSlots;
                         });
 
+                        let assigned = false;
                         for (const partner of availablePartners) {
-                                const partnerAttendance = attendances.find(att => att.userId.equals(partner._id));
-                                if (partnerAttendance) {
-                                        order.partnerId = partner._id;
-                                        await order.save();
-                                        console.log(`Order ${order._id} assigned to partner ${partner._id} successfully.`);
-                                        break;
+                                const distance = haversineDistance(orderLocation, partner.currentLocation.coordinates);
+                                console.log("distance", distance);
+                                const maxDistanceObj = distanceCriteria.find(criteria => criteria.transportMode === partner.transportation);
+                                console.log("maxDistanceObj", maxDistanceObj);
+                                if (maxDistanceObj && distance <= maxDistanceObj.radiusInKms) {
+                                        const partnerAttendance = attendances.find(att => att.userId.equals(partner._id));
+                                        if (partnerAttendance) {
+                                                const mainCategoryIdStr = partnerAttendance.mainCategoryId.toString();
+                                                console.log("categorizedSlots", categorizedSlots);
+                                                console.log("partnerAttendance.mainCategoryId", partnerAttendance.mainCategoryId);
+                                                console.log("mainCategoryIdStr", mainCategoryIdStr);
+
+                                                if (categorizedSlots[mainCategoryIdStr] && categorizedSlots[mainCategoryIdStr].length > 0) {
+
+                                                        order.partnerId = partner._id;
+                                                        order.partnerLocation.coordinates = partner.currentLocation.coordinates;
+                                                        await order.save();
+                                                        console.log(`Order ${order._id} assigned to partner ${partner._id} successfully.`);
+                                                        assigned = true;
+                                                        break;
+                                                }
+                                        }
                                 }
+                        }
+                        if (!assigned) {
+                                console.log(`No suitable partner found for order ${order._id}`);
                         }
                 }
         } catch (error) {
                 console.error("Error assigning order to partner:", error);
         }
 }
-const intervalMinutes = 15;
-const intervalMilliseconds = intervalMinutes * 60 * 1000;
+const intervalMinutes = 1;
+const intervalMilliseconds = intervalMinutes * 10 * 1000;
 const startInterval = () => {
         console.log(`Starting interval to assign orders to partners every ${intervalMinutes} minute(s).`);
         setInterval(async () => {
@@ -5586,7 +5644,6 @@ const startInterval = () => {
                 await assignOrderToPartner();
         }, intervalMilliseconds);
 };
-
 startInterval();
 
 
