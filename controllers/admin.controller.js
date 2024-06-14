@@ -130,23 +130,23 @@ exports.update = async (req, res) => {
 };
 exports.createBreed = async (req, res) => {
     try {
-        const { mainCategory: mainCategoryId, name, description, size, breedAggressive, status, type } = req.body;
+        const { /*mainCategory: mainCategoryId,*/ name, description, size, breedAggressive, status, type } = req.body;
 
-        let findBreed = await Breed.findOne({ name, mainCategory: mainCategoryId, type });
+        let findBreed = await Breed.findOne({ name, size, type });
         console.log(findBreed);
         if (findBreed) {
             return res.status(409).json({ message: "Breed already exists.", status: 409 });
         }
 
         let fileUrl = req.file ? req.file.path : "";
-        const data = { mainCategory: mainCategoryId, name, description, size, breedAggressive, status, type, image: fileUrl };
+        const data = {/* mainCategory: mainCategoryId,*/ name, description, size, breedAggressive, status, type, image: fileUrl };
 
-        if (mainCategoryId) {
-            const findMainCategory = await mainCategory.findById(mainCategoryId);
-            if (!findMainCategory) {
-                return res.status(404).json({ message: "Main Category Not Found", status: 404 });
-            }
-        }
+        // if (mainCategoryId) {
+        //     const findMainCategory = await mainCategory.findById(mainCategoryId);
+        //     if (!findMainCategory) {
+        //         return res.status(404).json({ message: "Main Category Not Found", status: 404 });
+        //     }
+        // }
 
         const breed = await Breed.create(data);
         return res.status(200).json({ message: "Breed added successfully.", status: 200, data: breed });
@@ -205,7 +205,7 @@ exports.updateBreed = async (req, res) => {
         let fileUrl = req.file ? req.file.path : breed.image;
 
         breed.image = fileUrl;
-        breed.mainCategory = req.body.mainCategory || breed.mainCategory;
+        // breed.mainCategory = req.body.mainCategory || breed.mainCategory;
         breed.name = req.body.name || breed.name;
         breed.description = req.body.description || breed.description;
         breed.size = req.body.size || breed.size;
@@ -5063,5 +5063,132 @@ exports.deleteImprove = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error' });
+    }
+};
+exports.createNotification = async (req, res) => {
+    try {
+        const admin = await User.findById(req.user._id);
+        if (!admin) {
+            return res.status(404).json({ status: 404, message: "Admin not found" });
+        }
+
+        const createNotification = async (userId) => {
+            const userData = await User.findById(userId);
+            if (!userData) {
+                throw new Error("User not found");
+            }
+
+            const notificationData = {
+                recipient: userId,
+                title: req.body.title,
+                content: req.body.content,
+                sendVia: req.body.sendVia,
+                expireIn: req.body.expireIn,
+            };
+            const notification = await Notification.create(notificationData);
+
+            if (req.body.sendVia === "FCM" && userData.deviceToken) {
+                await firebase.pushNotificationforUser(userData.deviceToken, req.body.title, req.body.content);
+            }
+
+            return notification;
+        };
+
+        if (req.body.total === "ALL") {
+            const users = await User.find({ userType: req.body.sendTo });
+            if (users.length === 0) {
+                return res.status(404).json({ status: 404, message: "Users not found" });
+            }
+
+            const notificationPromises = users.map(user => createNotification(user._id));
+            await Promise.all(notificationPromises);
+            await createNotification(admin._id);
+
+            return res.status(200).json({ status: 200, message: "Notifications sent successfully to all users." });
+        }
+
+        if (req.body.total === "SINGLE") {
+            const user = await User.findById(req.body._id);
+            if (!user || user.userType !== req.body.sendTo) {
+                return res.status(404).json({ status: 404, message: "User not found or invalid user type" });
+            }
+
+            const notificationData = await createNotification(user._id);
+
+            return res.status(200).json({ status: 200, message: "Notification sent successfully.", data: notificationData });
+        }
+
+        return res.status(400).json({ status: 400, message: "Invalid 'total' value" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Server error", data: {} });
+    }
+};
+exports.markNotificationAsRead = async (req, res) => {
+    try {
+        const notificationId = req.params.notificationId;
+
+        const notification = await Notification.findByIdAndUpdate(
+            notificationId,
+            { status: 'read' },
+            { new: true }
+        );
+
+        if (!notification) {
+            return res.status(404).json({ status: 404, message: 'Notification not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Notification marked as read', data: notification });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Error marking notification as read', error: error.message });
+    }
+};
+exports.getNotificationsForUser = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ status: 404, message: 'User not found' });
+        }
+
+        const notifications = await Notification.find({ recipient: userId });
+
+        return res.status(200).json({ status: 200, message: 'Notifications retrieved successfully', data: notifications });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
+    }
+};
+exports.getAllNotificationsForUser = async (req, res) => {
+    try {
+        const notifications = await Notification.find();
+
+        return res.status(200).json({ status: 200, message: 'Notifications retrieved successfully', data: notifications });
+    } catch (error) {
+        return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
+    }
+};
+exports.deleteNotificationById = async (req, res) => {
+    try {
+        const notificationId = req.params.id;
+        const deletedNotification = await Notification.findByIdAndDelete(notificationId);
+
+        if (!deletedNotification) {
+            return res.status(404).json({ status: 404, message: 'Notification not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Notification deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+exports.deleteAllNotifications = async (req, res) => {
+    try {
+        await Notification.deleteMany({});
+        return res.status(200).json({ status: 200, message: 'All notifications deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
     }
 };

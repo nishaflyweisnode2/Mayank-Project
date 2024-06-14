@@ -204,7 +204,12 @@ module.exports = (app) => {
         app.get('/api/v1/admin/improves/:id', authJwt.verifyToken, auth.getImproveById);
         app.put('/api/v1/admin/improves/:id', authJwt.verifyToken, auth.updateImprove);
         app.delete('/api/v1/admin/improves/:id', authJwt.verifyToken, auth.deleteImprove);
-
+        app.post('/api/v1/admin/notifications', [authJwt.verifyToken], auth.createNotification);
+        app.put('/api/v1/admin/notifications/:notificationId', [authJwt.verifyToken], auth.markNotificationAsRead);
+        app.get('/api/v1/admin/notifications/user/:userId', [authJwt.verifyToken], auth.getNotificationsForUser);
+        app.get('/api/v1/admin/notifications/user', [authJwt.verifyToken], auth.getAllNotificationsForUser);
+        app.delete('/api/v1/admin/notifications/delete/all', [authJwt.verifyToken], auth.deleteAllNotifications);
+        app.delete('/api/v1/admin/notifications/delete/:id', [authJwt.verifyToken], auth.deleteNotificationById);
 
 
 }

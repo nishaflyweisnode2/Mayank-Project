@@ -102,4 +102,8 @@ module.exports = (app) => {
         app.get('/api/v1/user/breed', [authJwt.verifyToken], auth.getBreeds);
         app.get('/api/v1/user/breed/:id', [authJwt.verifyToken], auth.getBreedById);
         app.get('/api/v1/user/breed/mainCategory/:id', [authJwt.verifyToken], auth.getBreedByMainCategoryId);
+        app.put('/api/v1/user/notifications/:notificationId', [authJwt.verifyToken], auth.markNotificationAsRead);
+        app.put('/api/v1/user/notifications/markAll/read', [authJwt.verifyToken], auth.markAllNotificationsAsRead);
+        app.get('/api/v1/user/notifications/user/:userId', [authJwt.verifyToken], auth.getNotificationsForUser);
+        app.get('/api/v1/user/notifications/user', [authJwt.verifyToken], auth.getAllNotificationsForUser);
 }

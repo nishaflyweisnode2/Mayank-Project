@@ -83,7 +83,10 @@ module.exports = (app) => {
         app.get('/api/v1/partner/teams/approval/request', [authJwt.verifyToken], auth.getApprovalRequestsByUser);
         app.post('/api/v1/partner/teams/approval/accept', [authJwt.verifyToken], auth.acceptApprovalRequest);
         app.post('/api/v1/partner/teams/approval/decline', [authJwt.verifyToken], auth.declineApprovalRequest);
-
+        app.put('/api/v1/partner/notifications/:notificationId', [authJwt.verifyToken], auth.markNotificationAsRead);
+        app.put('/api/v1/partner/notifications/markAll/read', [authJwt.verifyToken], auth.markAllNotificationsAsRead);
+        app.get('/api/v1/partner/notifications/user/:notificationId', [authJwt.verifyToken], auth.getNotificationsById);
+        app.get('/api/v1/partner/all/notifications/user', [authJwt.verifyToken], auth.getAllNotificationsForUser);
 
 
 }

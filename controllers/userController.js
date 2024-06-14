@@ -5441,6 +5441,80 @@ exports.getBreedByMainCategoryId = async (req, res) => {
                 return res.status(500).json({ status: 500, message: error.message });
         }
 };
+exports.markNotificationAsRead = async (req, res) => {
+        try {
+                const notificationId = req.params.notificationId;
+
+                const notification = await Notification.findByIdAndUpdate(
+                        notificationId,
+                        { status: 'read' },
+                        { new: true }
+                );
+
+                if (!notification) {
+                        return res.status(404).json({ status: 404, message: 'Notification not found' });
+                }
+
+                return res.status(200).json({ status: 200, message: 'Notification marked as read', data: notification });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: 'Error marking notification as read', error: error.message });
+        }
+};
+exports.markAllNotificationsAsRead = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const user = await User.findById(userId);
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: 'User not found' });
+                }
+
+                const notifications = await Notification.updateMany(
+                        { recipient: userId, },
+                        { status: 'read' }
+                );
+
+                if (!notifications) {
+                        return res.status(404).json({ status: 404, message: 'No notifications found for the user' });
+                }
+
+                return res.status(200).json({ status: 200, message: 'All notifications marked as read for the user', data: notifications });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: 'Error marking notifications as read', error: error.message });
+        }
+};
+exports.getNotificationsForUser = async (req, res) => {
+        try {
+                const userId = req.params.userId;
+
+                const user = await User.findById(userId);
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: 'User not found' });
+                }
+
+                const notifications = await Notification.find({ recipient: userId });
+
+                return res.status(200).json({ status: 200, message: 'Notifications retrieved successfully', data: notifications });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
+        }
+};
+exports.getAllNotificationsForUser = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const user = await User.findById(userId);
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: 'User not found', data: null });
+                }
+                const notifications = await Notification.find({ recipient: userId });
+
+                return res.status(200).json({ status: 200, message: 'Notifications retrieved successfully', data: notifications });
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
+        }
+};
+
 
 function haversineDistance(coords1, coords2) {
         const toRad = (x) => x * Math.PI / 180;
@@ -5541,7 +5615,7 @@ async function assignOrderToPartner() {
                 for (const order of orders) {
                         let mainCategories;
                         let orderLocation = order.userId.currentLocation.coordinates;
-                        // console.log("orderLocation", orderLocation);
+                        console.log("orderLocation", orderLocation);
 
                         if (order.packages && order.packages.length > 0) {
                                 mainCategories = order.packages.map(pkg => pkg.packageId.mainCategoryId);
@@ -5557,7 +5631,7 @@ async function assignOrderToPartner() {
                                 userId: { $in: partnerIds }
                         });
 
-                        // console.log("attendances", attendances);
+                        console.log("attendances", attendances);
 
                         if (!attendances.length) {
                                 console.log(`Attendance not marked for main categories in order ${order._id}`);
@@ -5598,15 +5672,16 @@ async function assignOrderToPartner() {
                                 });
 
                                 // console.log("availableSlots", availableSlots);
-                                categorizedSlots[category] = availableSlots;
+                                // categorizedSlots[category] = availableSlots;
+                                categorizedSlots[category.toString()] = availableSlots;
                         });
 
                         let assigned = false;
                         for (const partner of availablePartners) {
                                 const distance = haversineDistance(orderLocation, partner.currentLocation.coordinates);
-                                console.log("distance", distance);
+                                // console.log("distance", distance);
                                 const maxDistanceObj = distanceCriteria.find(criteria => criteria.transportMode === partner.transportation);
-                                console.log("maxDistanceObj", maxDistanceObj);
+                                // console.log("maxDistanceObj", maxDistanceObj);
                                 if (maxDistanceObj && distance <= maxDistanceObj.radiusInKms) {
                                         const partnerAttendance = attendances.find(att => att.userId.equals(partner._id));
                                         if (partnerAttendance) {
