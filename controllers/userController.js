@@ -417,8 +417,9 @@ exports.createPet = async (req, res) => {
                         }
                 }
 
+                let checkBreed;
                 if (breed) {
-                        const checkBreed = await Breed.findById(breed);
+                        checkBreed = await Breed.findById(breed);
                         if (!checkBreed) {
                                 return res.status(404).json({ status: 404, message: 'Breed not found' });
                         }
@@ -436,7 +437,8 @@ exports.createPet = async (req, res) => {
                         breed,
                         image: image,
                         age,
-                        gender
+                        gender,
+                        size: checkBreed.size
                 });
 
                 return res.status(201).json({ status: 201, data: newPet });
@@ -502,23 +504,34 @@ exports.updatePet = async (req, res) => {
                         }
                 }
 
+                let checkBreed;
                 if (req.body.breed) {
-                        const checkBreed = await Breed.findById(req.body.breed);
+                        checkBreed = await Breed.findById(req.body.breed);
                         if (!checkBreed) {
                                 return res.status(404).json({ status: 404, message: 'Breed not found' });
                         }
                 }
 
-                const pet = await Pet.findByIdAndUpdate(req.params.id, { ...req.body, image: imageData }, {
+                const updateData = { ...req.body };
+                if (imageData) {
+                        updateData.image = imageData;
+                }
+
+                const petData = await Pet.findByIdAndUpdate(req.params.id, updateData, {
                         new: true,
                         runValidators: true
                 });
 
-                if (!pet) {
+                if (!petData) {
                         return res.status(404).json({ status: 404, message: 'Pet not found' });
                 }
 
-                return res.status(200).json({ status: 200, data: pet });
+                if (checkBreed) {
+                        petData.size = checkBreed.size;
+                        await petData.save();
+                }
+
+                return res.status(200).json({ status: 200, data: petData });
         } catch (error) {
                 console.error(error);
                 return res.status(500).json({ status: 500, message: 'Server Error' });
@@ -696,9 +709,6 @@ exports.getCart = async (req, res) => {
                 return res.status(500).json({ status: 500, message: "Server error" + error.message });
         }
 };
-
-
-
 exports.listOffer = async (req, res) => {
         try {
                 let vendorData = await User.findOne({ _id: req.user._id });
@@ -794,241 +804,6 @@ exports.listTicket = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-// exports.addToCart = async (req, res) => {
-//         try {
-//                 const userData = await User.findOne({ _id: req.user._id });
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 } else {
-//                         const findCart = await Cart.findOne({ userId: userData._id });
-//                         if (findCart) {
-//                                 const findService = await service.findById({ _id: req.body._id });
-//                                 const existingService = findCart.services.find(service => service.serviceId.equals(findService._id));
-
-//                                 if (existingService) {
-//                                         existingService.quantity += req.body.quantity;
-//                                         existingService.total = existingService.price * existingService.quantity;
-
-//                                         findCart.totalAmount += existingService.price * req.body.quantity;
-//                                         findCart.paidAmount += existingService.price * req.body.quantity;
-
-//                                         await findCart.save();
-//                                         console.log("first", findCart);
-//                                         return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
-
-//                                 } else {
-//                                         const price = findService.discountActive ? findService.discountPrice : findService.originalPrice;
-
-//                                         const newService = {
-//                                                 serviceId: findService._id,
-//                                                 price: price,
-//                                                 quantity: req.body.quantity,
-//                                                 total: price * req.body.quantity,
-//                                                 type: "Service"
-//                                         };
-
-//                                         findCart.services.push(newService);
-
-//                                         findCart.totalAmount += newService.total;
-//                                         findCart.paidAmount += newService.total;
-//                                         findCart.totalItem++;
-
-//                                         await findCart.save();
-//                                         console.log("else second", findCart);
-//                                         return res.status(200).json({ status: 200, message: "Service added to the cart.", data: findCart });
-//                                 }
-
-//                         } else {
-//                                 let findService = await service.findById({ _id: req.body._id });
-//                                 console.log("findServicesPrince", findService);
-//                                 if (findService) {
-//                                         let Charged = [], paidAmount = 0, totalAmount = 0, additionalFee = 0;
-//                                         const findCharge = await Charges.find({});
-//                                         if (findCharge.length > 0) {
-//                                                 for (let i = 0; i < findCharge.length; i++) {
-//                                                         let obj1 = {
-//                                                                 chargeId: findCharge[i]._id,
-//                                                                 charge: findCharge[i].charge,
-//                                                                 discountCharge: findCharge[i].discountCharge,
-//                                                                 discount: findCharge[i].discount,
-//                                                                 cancelation: findCharge[i].cancelation,
-//                                                         }
-//                                                         if (findCharge[i].cancelation == false) {
-//                                                                 if (findCharge[i].discount == true) {
-//                                                                         additionalFee = additionalFee + findCharge[i].discountCharge
-//                                                                 } else {
-//                                                                         additionalFee = additionalFee + findCharge[i].charge
-//                                                                 }
-//                                                         }
-//                                                         Charged.push(obj1)
-//                                                 }
-//                                         }
-//                                         if (findService.type == "Service") {
-//                                                 console.log(findService);
-//                                                 let price = 0;
-//                                                 if (findService.discountActive == true) {
-//                                                         price = findService.discountPrice;
-//                                                 } else {
-//                                                         price = findService.originalPrice;
-//                                                 }
-//                                                 totalAmount = Number(price * req.body.quantity).toFixed(2);
-//                                                 paidAmount = (Number((price * req.body.quantity).toFixed(2)) + Number(additionalFee))
-//                                                 let obj = {
-//                                                         userId: userData._id,
-//                                                         Charges: Charged,
-//                                                         services: [{
-//                                                                 serviceId: findService._id,
-//                                                                 packageServices: req.body.packageServices,
-//                                                                 price: price,
-//                                                                 quantity: req.body.quantity,
-//                                                                 total: price * req.body.quantity,
-//                                                                 type: "Service"
-//                                                         }],
-//                                                         totalAmount: totalAmount,
-//                                                         additionalFee: additionalFee,
-//                                                         paidAmount: paidAmount,
-//                                                         totalItem: 1,
-//                                                 }
-//                                                 const Data = await Cart.create(obj);
-//                                                 console.log("third", Data);
-//                                                 return res.status(200).json({ status: 200, message: "Service successfully add to cart. ", data: Data })
-//                                         }
-//                                         if (findService.type == "Package") {
-//                                                 if (findService.packageType == "Edit") {
-//                                                         console.log(findService);
-//                                                         let categoryServices = []
-//                                                         if (!req.body.servicePackageId) {
-//                                                                 return res.status(400).json({ status: 400, message: "Package Service not edit." })
-//                                                         }
-//                                                         let findServicePackage = await servicePackage.findById({ _id: req.body.servicePackageId })
-//                                                         if (findServicePackage) {
-
-//                                                                 let packageServices = []; for (let i = 0; i < req.body.packageServices.length; i++) {
-//                                                                         let findService1 = await service.findById({ _id: req.body.packageServices[i] });
-//                                                                         packageServices.push(findService1._id);
-//                                                                         let price = 0;
-//                                                                         if (findService.discountActive == true) {
-//                                                                                 price = findService.discountPrice;
-//                                                                         } else {
-//                                                                                 price = findService.originalPrice;
-//                                                                         }
-//                                                                         let obj = {
-//                                                                                 service: findService1._id,
-//                                                                                 price: price,
-//                                                                                 quantity: 1,
-//                                                                                 total: price,
-//                                                                         }
-//                                                                         categoryServices.push(obj)
-//                                                                 }
-//                                                         }
-//                                                         let total = 0;
-//                                                         for (let j = 0; j < categoryServices.length; j++) {
-//                                                                 total = total + categoryServices[j].total
-//                                                         }
-//                                                         totalAmount = Number(total).toFixed(2);
-//                                                         paidAmount = (Number((total).toFixed(2)) + Number(additionalFee))
-//                                                         let obj = {
-//                                                                 userId: userData._id,
-//                                                                 Charges: Charged,
-//                                                                 totalAmount: totalAmount,
-//                                                                 services: [{
-//                                                                         serviceId: findService._id,
-//                                                                         categoryId: findServicePackage.categoryId,
-//                                                                         services: categoryServices,
-//                                                                         packageServices: packageServices,
-//                                                                         quantity: 1,
-//                                                                         total: total,
-//                                                                         type: "Package",
-//                                                                         packageType: "Edit",
-//                                                                 }],
-//                                                                 additionalFee: additionalFee,
-//                                                                 paidAmount: paidAmount,
-//                                                                 totalItem: 1,
-//                                                         }
-//                                                         console.log("fourth", obj);
-//                                                         const Data = await Cart.create(obj);
-//                                                         return res.status(200).json({ status: 200, message: "Service successfully add to cart. ", data: Data })
-//                                                 } else if (findService.packageType == "Normal") {
-//                                                         let price = 0;
-//                                                         if (findService.discountActive == true) {
-//                                                                 price = findService.discountPrice;
-//                                                         } else {
-//                                                                 price = findService.originalPrice;
-//                                                         }
-//                                                         totalAmount = Number(price * req.body.quantity).toFixed(2);
-//                                                         paidAmount = (Number((price * req.body.quantity).toFixed(2)) + Number(additionalFee))
-//                                                         console.log(totalAmount, additionalFee, paidAmount);
-//                                                         let obj = {
-//                                                                 userId: userData._id,
-//                                                                 Charges: Charged,
-//                                                                 services: [{
-//                                                                         serviceId: findService._id,
-//                                                                         price: price,
-//                                                                         quantity: req.body.quantity,
-//                                                                         total: price * req.body.quantity,
-//                                                                         type: "Package",
-//                                                                         packageType: "Normal",
-//                                                                 }],
-//                                                                 totalAmount: totalAmount,
-//                                                                 additionalFee: additionalFee,
-//                                                                 paidAmount: paidAmount,
-//                                                                 totalItem: 1,
-//                                                         }
-//                                                         console.log("fifth", obj);
-
-//                                                         const Data = await Cart.create(obj);
-//                                                         return res.status(200).json({ status: 200, message: "Service successfully add to cart. ", data: Data })
-//                                                 } else if (findService.packageType == "Customise") {
-//                                                         console.log(findService);
-//                                                         let price = 0, services = [];
-//                                                         if (findService.discountActive == true) {
-//                                                                 price = findService.discountPrice;
-//                                                         } else {
-//                                                                 price = findService.originalPrice;
-//                                                         }
-//                                                         totalAmount = Number(price * req.body.quantity).toFixed(2);
-//                                                         paidAmount = (Number((price * req.body.quantity).toFixed(2)) + Number(additionalFee))
-//                                                         if (findService.selectedCount == (req.body.packageServices).length) {
-//                                                                 let obj = {
-//                                                                         serviceId: findService._id,
-//                                                                         packageServices: req.body.packageServices,
-//                                                                         price: price,
-//                                                                         quantity: req.body.quantity,
-//                                                                         total: price * req.body.quantity,
-//                                                                         type: "Package",
-//                                                                         packageType: "Customise",
-//                                                                 }
-//                                                                 services.push(obj)
-//                                                                 let obj1 = {
-//                                                                         userId: userData._id,
-//                                                                         Charges: Charged,
-//                                                                         services: services,
-//                                                                         totalAmount: totalAmount,
-//                                                                         additionalFee: additionalFee,
-//                                                                         paidAmount: paidAmount,
-//                                                                         totalItem: 1,
-//                                                                 }
-//                                                                 console.log("sixth", obj);
-//                                                                 console.log("seventh", obj1);
-
-//                                                                 const Data = await Cart.create(obj1);
-//                                                                 return res.status(200).json({ status: 200, message: "Service successfully add to cart. ", data: Data })
-//                                                         } else {
-//                                                                 return res.status(201).send({ status: 201, message: `You can select only ${findService.selectedCount} not more than ${findService.selectedCount}` });
-//                                                         }
-//                                                 }
-//                                         }
-//                                 } else {
-//                                         return res.status(404).send({ status: 404, message: "Service not found" });
-//                                 }
-//                         }
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// };
-
 exports.replyOnTicket = async (req, res) => {
         try {
                 const data = await User.findOne({ _id: req.user._id, });
@@ -1054,458 +829,7 @@ exports.replyOnTicket = async (req, res) => {
                 return res.status(501).send({ status: 501, message: "server error.", data: {}, });
         }
 };
-// exports.addToCartSingleService = async (req, res) => {
-//         try {
-//                 const userData = await User.findOne({ _id: req.user._id });
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 } else {
-//                         const findCart = await Cart.findOne({ userId: userData._id });
-//                         if (findCart) {
-//                                 const findService = await service.findById({ _id: req.body._id });
-//                                 const existingService = findCart.services.find(service => service.serviceId.equals(findService._id));
-//                                 if (existingService) {
-//                                         existingService.quantity += req.body.quantity;
-//                                         existingService.total = existingService.price * existingService.quantity;
-//                                         findCart.totalAmount += existingService.price * req.body.quantity;
-//                                         findCart.paidAmount += existingService.price * req.body.quantity;
-//                                         await findCart.save();
-//                                         return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
-//                                 } else {
-//                                         const price = findService.discountActive ? findService.discountPrice : findService.originalPrice;
-//                                         const newService = {
-//                                                 serviceId: findService._id,
-//                                                 price: price,
-//                                                 quantity: req.body.quantity,
-//                                                 total: price * req.body.quantity,
-//                                                 // type: "Service"
-//                                                 type: findService.type,
-//                                                 packageType: findService.packageType,
-//                                         };
-//                                         findCart.services.push(newService);
-//                                         findCart.totalAmount += newService.total;
-//                                         findCart.paidAmount += newService.total;
-//                                         findCart.totalItem++;
-//                                         await findCart.save();
-//                                         return res.status(200).json({ status: 200, message: "Service added to the cart.", data: findCart });
-//                                 }
-//                         } else {
-//                                 let findService = await service.findById({ _id: req.body._id });
-//                                 if (findService) {
-//                                         let Charged = [], paidAmount = 0, totalAmount = 0, additionalFee = 0;
-//                                         const findCharge = await Charges.find({});
-//                                         if (findCharge.length > 0) {
-//                                                 for (let i = 0; i < findCharge.length; i++) {
-//                                                         let obj1 = {
-//                                                                 chargeId: findCharge[i]._id,
-//                                                                 charge: findCharge[i].charge,
-//                                                                 discountCharge: findCharge[i].discountCharge,
-//                                                                 discount: findCharge[i].discount,
-//                                                                 cancelation: findCharge[i].cancelation,
-//                                                         }
-//                                                         if (findCharge[i].cancelation == false) {
-//                                                                 if (findCharge[i].discount == true) {
-//                                                                         additionalFee = additionalFee + findCharge[i].discountCharge
-//                                                                 } else {
-//                                                                         additionalFee = additionalFee + findCharge[i].charge
-//                                                                 }
-//                                                         }
-//                                                         Charged.push(obj1)
-//                                                 }
-//                                         }
-//                                         if (findService.type == "Service") {
-//                                                 console.log(findService);
-//                                                 let price = 0;
-//                                                 if (findService.discountActive == true) {
-//                                                         price = findService.discountPrice;
-//                                                 } else {
-//                                                         price = findService.originalPrice;
-//                                                 }
-//                                                 totalAmount = Number(price * req.body.quantity).toFixed(2);
-//                                                 paidAmount = (Number((price * req.body.quantity).toFixed(2)) + Number(additionalFee))
-//                                                 let obj = {
-//                                                         userId: userData._id,
-//                                                         Charges: Charged,
-//                                                         services: [{
-//                                                                 serviceId: findService._id,
-//                                                                 packageServices: req.body.packageServices,
-//                                                                 price: price,
-//                                                                 quantity: req.body.quantity,
-//                                                                 total: price * req.body.quantity,
-//                                                                 type: "Service"
-//                                                         }],
-//                                                         totalAmount: totalAmount,
-//                                                         additionalFee: additionalFee,
-//                                                         paidAmount: paidAmount,
-//                                                         totalItem: 1,
-//                                                 }
-//                                                 const Data = await Cart.create(obj);
-//                                                 return res.status(200).json({ status: 200, message: "Service successfully add to cart. ", data: Data })
-//                                         }
-//                                 } else {
-//                                         return res.status(404).send({ status: 404, message: "Service not found" });
-//                                 }
-//                         }
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// }
-// exports.addToCartPackageNormal = async (req, res) => {
-//         try {
-//                 const userData = await User.findOne({ _id: req.user._id });
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 } else {
-//                         const findCart = await Cart.findOne({ userId: userData._id });
-//                         if (findCart) {
-//                                 const findService = await service.findById({ _id: req.body._id });
-//                                 const existingService = findCart.services.find(service => service.serviceId.equals(findService._id));
-//                                 if (existingService) {
-//                                         existingService.quantity += req.body.quantity;
-//                                         existingService.total = existingService.price * existingService.quantity;
-//                                         findCart.totalAmount += existingService.price * req.body.quantity;
-//                                         findCart.paidAmount += existingService.price * req.body.quantity;
-//                                         await findCart.save();
-//                                         return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
-//                                 } else {
-//                                         const price = findService.discountActive ? findService.discountPrice : findService.originalPrice;
-//                                         const newService = {
-//                                                 serviceId: findService._id,
-//                                                 price: price,
-//                                                 quantity: req.body.quantity,
-//                                                 total: price * req.body.quantity,
-//                                                 // type: "Service"
-//                                                 type: findService.type,
-//                                                 packageType: findService.packageType,
-//                                         };
-//                                         findCart.services.push(newService);
-//                                         findCart.totalAmount += newService.total;
-//                                         findCart.paidAmount += newService.total;
-//                                         findCart.totalItem++;
-//                                         await findCart.save();
-//                                         return res.status(200).json({ status: 200, message: "Service added to the cart.", data: findCart });
-//                                 }
-
-//                         } else {
-//                                 let findService = await service.findById({ _id: req.body._id });
-//                                 if (findService) {
-//                                         let Charged = [], paidAmount = 0, totalAmount = 0, additionalFee = 0;
-//                                         const findCharge = await Charges.find({});
-//                                         if (findCharge.length > 0) {
-//                                                 for (let i = 0; i < findCharge.length; i++) {
-//                                                         let obj1 = {
-//                                                                 chargeId: findCharge[i]._id,
-//                                                                 charge: findCharge[i].charge,
-//                                                                 discountCharge: findCharge[i].discountCharge,
-//                                                                 discount: findCharge[i].discount,
-//                                                                 cancelation: findCharge[i].cancelation,
-//                                                         }
-//                                                         if (findCharge[i].cancelation == false) {
-//                                                                 if (findCharge[i].discount == true) {
-//                                                                         additionalFee = additionalFee + findCharge[i].discountCharge
-//                                                                 } else {
-//                                                                         additionalFee = additionalFee + findCharge[i].charge
-//                                                                 }
-//                                                         }
-//                                                         Charged.push(obj1)
-//                                                 }
-//                                         }
-//                                         if (findService.type == "Package") {
-//                                                 if (findService.packageType == "Normal") {
-//                                                         let price = 0;
-//                                                         if (findService.discountActive == true) {
-//                                                                 price = findService.discountPrice;
-//                                                         } else {
-//                                                                 price = findService.originalPrice;
-//                                                         }
-//                                                         totalAmount = Number(price * req.body.quantity).toFixed(2);
-//                                                         paidAmount = (Number((price * req.body.quantity).toFixed(2)) + Number(additionalFee))
-//                                                         console.log(totalAmount, additionalFee, paidAmount);
-//                                                         let obj = {
-//                                                                 userId: userData._id,
-//                                                                 Charges: Charged,
-//                                                                 services: [{
-//                                                                         serviceId: findService._id,
-//                                                                         price: price,
-//                                                                         quantity: req.body.quantity,
-//                                                                         total: price * req.body.quantity,
-//                                                                         type: "Package",
-//                                                                         packageType: "Normal",
-//                                                                 }],
-//                                                                 totalAmount: totalAmount,
-//                                                                 additionalFee: additionalFee,
-//                                                                 paidAmount: paidAmount,
-//                                                                 totalItem: 1,
-//                                                         }
-//                                                         const Data = await Cart.create(obj);
-//                                                         return res.status(200).json({ status: 200, message: "Service successfully add to cart. ", data: Data })
-//                                                 }
-//                                         }
-//                                 } else {
-//                                         return res.status(404).send({ status: 404, message: "Service not found" });
-//                                 }
-//                         }
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// };
-// exports.addToCartPackageCustomise = async (req, res) => {
-//         try {
-//                 const userData = await User.findOne({ _id: req.user._id });
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 } else {
-//                         const findCart = await Cart.findOne({ userId: userData._id });
-//                         if (findCart) {
-//                                 const findService = await service.findById({ _id: req.body._id });
-//                                 const existingService = findCart.services.find(service => service.serviceId.equals(findService._id));
-//                                 if (existingService) {
-//                                         existingService.quantity += req.body.quantity;
-//                                         existingService.total = existingService.price * existingService.quantity;
-
-//                                         findCart.totalAmount += existingService.price * req.body.quantity;
-//                                         findCart.paidAmount += existingService.price * req.body.quantity;
-
-//                                         await findCart.save();
-
-//                                         return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
-
-//                                 } else {
-//                                         const price = findService.discountActive ? findService.discountPrice : findService.originalPrice;
-
-//                                         const newService = {
-//                                                 serviceId: findService._id,
-//                                                 price: price,
-//                                                 quantity: req.body.quantity,
-//                                                 total: price * req.body.quantity,
-//                                                 // type: "Service"
-//                                                 type: findService.type,
-//                                                 packageType: findService.packageType,
-//                                         };
-
-//                                         findCart.services.push(newService);
-
-//                                         findCart.totalAmount += newService.total;
-//                                         findCart.paidAmount += newService.total;
-//                                         findCart.totalItem++;
-
-//                                         await findCart.save();
-
-//                                         return res.status(200).json({ status: 200, message: "Service added to the cart.", data: findCart });
-//                                 }
-
-//                         } else {
-//                                 let findService = await service.findById({ _id: req.body._id });
-//                                 if (findService) {
-//                                         let Charged = [], paidAmount = 0, totalAmount = 0, additionalFee = 0;
-//                                         const findCharge = await Charges.find({});
-//                                         if (findCharge.length > 0) {
-//                                                 for (let i = 0; i < findCharge.length; i++) {
-//                                                         let obj1 = {
-//                                                                 chargeId: findCharge[i]._id,
-//                                                                 charge: findCharge[i].charge,
-//                                                                 discountCharge: findCharge[i].discountCharge,
-//                                                                 discount: findCharge[i].discount,
-//                                                                 cancelation: findCharge[i].cancelation,
-//                                                         }
-//                                                         if (findCharge[i].cancelation == false) {
-//                                                                 if (findCharge[i].discount == true) {
-//                                                                         additionalFee = additionalFee + findCharge[i].discountCharge
-//                                                                 } else {
-//                                                                         additionalFee = additionalFee + findCharge[i].charge
-//                                                                 }
-//                                                         }
-//                                                         Charged.push(obj1)
-//                                                 }
-//                                         }
-//                                         if (findService.type == "Package") {
-//                                                 if (findService.packageType == "Customise") {
-//                                                         let price = 0, services = [];
-//                                                         if (findService.discountActive == true) {
-//                                                                 price = findService.discountPrice;
-//                                                         } else {
-//                                                                 price = findService.originalPrice;
-//                                                         }
-//                                                         totalAmount = Number(price * req.body.quantity).toFixed(2);
-//                                                         paidAmount = (Number((price * req.body.quantity).toFixed(2)) + Number(additionalFee))
-//                                                         if (findService.selectedCount == (req.body.packageServices).length) {
-//                                                                 let obj = {
-//                                                                         serviceId: findService._id,
-//                                                                         packageServices: req.body.packageServices,
-//                                                                         price: price,
-//                                                                         quantity: req.body.quantity,
-//                                                                         total: price * req.body.quantity,
-//                                                                         type: "Package",
-//                                                                         packageType: "Customise",
-//                                                                 }
-//                                                                 services.push(obj)
-//                                                                 let obj1 = {
-//                                                                         userId: userData._id,
-//                                                                         Charges: Charged,
-//                                                                         services: services,
-//                                                                         totalAmount: totalAmount,
-//                                                                         additionalFee: additionalFee,
-//                                                                         paidAmount: paidAmount,
-//                                                                         totalItem: 1,
-//                                                                 }
-//                                                                 const Data = await Cart.create(obj1);
-//                                                                 return res.status(200).json({ status: 200, message: "Service successfully add to cart. ", data: Data })
-//                                                         } else {
-//                                                                 return res.status(201).send({ status: 201, message: `You can select only ${findService.selectedCount} not more than ${findService.selectedCount}` });
-//                                                         }
-//                                                 }
-//                                         }
-
-//                                 } else {
-//                                         return res.status(404).send({ status: 404, message: "Service not found" });
-//                                 }
-//                         }
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// };
-// exports.addToCartPackageEdit = async (req, res) => {
-//         try {
-//                 const userData = await User.findOne({ _id: req.user._id });
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 } else {
-//                         const findCart = await Cart.findOne({ userId: userData._id });
-//                         if (findCart) {
-//                                 const findService = await service.findById({ _id: req.body._id });
-//                                 const existingService = findCart.services.find(service => service.serviceId.equals(findService._id));
-//                                 if (existingService) {
-//                                         existingService.quantity += req.body.quantity;
-//                                         existingService.total = existingService.price * existingService.quantity;
-
-//                                         findCart.totalAmount += existingService.price * req.body.quantity;
-//                                         findCart.paidAmount += existingService.price * req.body.quantity;
-
-//                                         await findCart.save();
-
-//                                         return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
-
-//                                 } else {
-//                                         const price = findService.discountActive ? findService.discountPrice : findService.originalPrice;
-
-//                                         const newService = {
-//                                                 serviceId: findService._id,
-//                                                 price: price,
-//                                                 quantity: req.body.quantity,
-//                                                 total: price * req.body.quantity,
-//                                                 // type: "Service"
-//                                                 type: findService.type,
-//                                                 packageType: findService.packageType,
-//                                         };
-
-//                                         findCart.services.push(newService);
-
-//                                         findCart.totalAmount += newService.total;
-//                                         findCart.paidAmount += newService.total;
-//                                         findCart.totalItem++;
-
-//                                         await findCart.save();
-
-//                                         return res.status(200).json({ status: 200, message: "Service added to the cart.", data: findCart });
-//                                 }
-
-//                         } else {
-//                                 let findService = await service.findById({ _id: req.body._id });
-//                                 if (findService) {
-//                                         let Charged = [], paidAmount = 0, totalAmount = 0, additionalFee = 0;
-//                                         const findCharge = await Charges.find({});
-//                                         if (findCharge.length > 0) {
-//                                                 for (let i = 0; i < findCharge.length; i++) {
-//                                                         let obj1 = {
-//                                                                 chargeId: findCharge[i]._id,
-//                                                                 charge: findCharge[i].charge,
-//                                                                 discountCharge: findCharge[i].discountCharge,
-//                                                                 discount: findCharge[i].discount,
-//                                                                 cancelation: findCharge[i].cancelation,
-//                                                         }
-//                                                         if (findCharge[i].cancelation == false) {
-//                                                                 if (findCharge[i].discount == true) {
-//                                                                         additionalFee = additionalFee + findCharge[i].discountCharge
-//                                                                 } else {
-//                                                                         additionalFee = additionalFee + findCharge[i].charge
-//                                                                 }
-//                                                         }
-//                                                         Charged.push(obj1)
-//                                                 }
-//                                         }
-//                                         if (findService.type == "Package") {
-//                                                 if (findService.packageType == "Edit") {
-//                                                         console.log(findService);
-//                                                         let categoryServices = [];
-//                                                         if (!req.body.servicePackageId) {
-//                                                                 return res.status(400).json({ status: 400, message: "Package Service not edit." })
-//                                                         }
-//                                                         let findServicePackage = await servicePackage.findById({ _id: req.body.servicePackageId })
-//                                                         if (findServicePackage) {
-//                                                                 for (let i = 0; i < req.body.packageServices.length; i++) {
-//                                                                         let findService1 = await service.findById({ _id: req.body.packageServices[i] });
-//                                                                         let price = 0;
-//                                                                         if (findService.discountActive == true) {
-//                                                                                 price = findService.discountPrice;
-//                                                                         } else {
-//                                                                                 price = findService.originalPrice;
-//                                                                         }
-//                                                                         let obj = {
-//                                                                                 service: findService1,
-//                                                                                 price: price,
-//                                                                                 quantity: 1,
-//                                                                                 total: price,
-//                                                                         }
-//                                                                         categoryServices.push(obj)
-//                                                                 }
-//                                                         }
-//                                                         let total = 0;
-//                                                         for (let j = 0; j < categoryServices.length; j++) {
-//                                                                 total = total + categoryServices[j].total
-//                                                         }
-//                                                         totalAmount = Number(total).toFixed(2);
-//                                                         paidAmount = (Number((total).toFixed(2)) + Number(additionalFee))
-//                                                         let obj = {
-//                                                                 userId: userData._id,
-//                                                                 Charges: Charged,
-//                                                                 totalAmount: totalAmount,
-//                                                                 services: [{
-//                                                                         serviceId: findService._id,
-//                                                                         categoryId: findServicePackage.categoryId,
-//                                                                         services: categoryServices,
-//                                                                         quantity: 1,
-//                                                                         total: total,
-//                                                                         type: "Package",
-//                                                                         packageType: "Edit",
-//                                                                 }],
-//                                                                 additionalFee: additionalFee,
-//                                                                 paidAmount: paidAmount,
-//                                                                 totalItem: 1,
-//                                                         }
-//                                                         console.log(obj);
-//                                                         const Data = await Cart.create(obj);
-//                                                         return res.status(200).json({ status: 200, message: "Service successfully add to cart. ", data: Data })
-//                                                 }
-//                                         }
-//                                 } else {
-//                                         return res.status(404).send({ status: 404, message: "Service not found" });
-//                                 }
-//                         }
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// };
-
-
-exports.addToCartSingleService = async (req, res) => {
+exports.addToCartSingleService1 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
                 // console.log("userdata", userData);
@@ -1638,8 +962,179 @@ exports.addToCartSingleService = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
+exports.addToCartSingleService = async (req, res) => {
+        try {
+                const userData = await User.findOne({ _id: req.user._id });
+                if (!userData || !userData.city) {
+                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                }
+               
+                let findPet;
+                if (req.body.pets) {
+                        findPet = await Pet.findOne({ _id: req.body.pets }).populate('breed');
+                } else {
+                        findPet = await Pet.findOne({ user: userData._id }).populate('breed');
+                }
+                console.log(findPet);
+                const findCart = await Cart.findOne({ userId: userData._id });
+                const findService = await service.findById({ _id: req.body._id });
 
-exports.addToCartAddOnSingleService = async (req, res) => {
+                if (!findService) {
+                        return res.status(404).json({ status: 404, message: "Service not found" });
+                }
+
+                let originalPrice = 0;
+                let discountActive = false;
+                let discountPrice = 0;
+                let discount = 0;
+
+                if (findService.variations && findService.variations.length > 0) {
+                        // const variation = findService.variations[0];
+                        const variation = findService.variations.find(v => v.size.toString() === findPet.size.toString());
+                        console.log("findService.variations", findService.variations);
+                        console.log("findPet.size", findPet.size);
+                        console.log("variation", variation);
+
+                        if (!variation) {
+                                return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
+                        }
+                        const month = req.body.month;
+                        if (month) {
+                                switch (month) {
+                                        case 'oneTime':
+                                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                discountActive = variation.oneTimediscountActive || false;
+                                                discountPrice = variation.oneTimediscountPrice || 0;
+                                                break;
+                                        case 'monthly':
+                                                originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                discountActive = variation.MonthlydiscountActive || false;
+                                                discountPrice = variation.MonthlydiscountPrice || 0;
+                                                break;
+                                        case 'threeMonth':
+                                                originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                discountActive = variation.threeMonthdiscountActive || false;
+                                                discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                break;
+                                        case 'sixMonth':
+                                                originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                discountActive = variation.sixMonthdiscountActive || false;
+                                                discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                break;
+                                        case 'twelveMonth':
+                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                discountActive = variation.twelveMonthdiscountActive || false;
+                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                break;
+                                        default:
+                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                }
+                        } else {
+                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                discountActive = variation.oneTimediscountActive || false;
+                                discountPrice = variation.oneTimediscountPrice || 0;
+                        }
+
+                        if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                                discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                                discount = Math.max(discount, 0);
+                                discount = Math.round(discount);
+                        }
+                }
+
+                let Charged = [];
+                let paidAmount = 0;
+                let totalAmount = 0;
+                let additionalFee = 0;
+
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                if (findService.type == "Service") {
+                        let price = discountActive ? discountPrice : originalPrice || 0;
+                        let quantity = req.body.quantity;
+
+                        if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                                return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                        }
+
+                        totalAmount = Number((price * quantity).toFixed(2));
+                        paidAmount = Number((totalAmount + additionalFee).toFixed(2));
+
+                        if (isNaN(totalAmount) || isNaN(paidAmount)) {
+                                return res.status(500).json({ status: 500, message: "Invalid total or paidAmount values." });
+                        }
+
+                        if (findCart) {
+                                const existingService = findCart.services.find(service => service.serviceId.equals(findService._id));
+
+                                if (existingService) {
+                                        existingService.quantity += quantity;
+                                        existingService.total = price * existingService.quantity;
+                                        findCart.totalAmount += price * quantity;
+                                        findCart.paidAmount += price * quantity;
+                                        await findCart.save();
+                                        return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                                }
+                        }
+
+                        let obj = {
+                                userId: userData._id,
+                                Charges: Charged,
+                                services: [{
+                                        serviceId: findService._id,
+                                        serviceType: findService.serviceType,
+                                        packageServices: req.body.packageServices,
+                                        price: price,
+                                        quantity: quantity,
+                                        total: totalAmount,
+                                        type: "Service",
+                                }],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                size: findPet.size,
+                                pets: findPet._id,
+                        };
+
+                        if (findCart) {
+                                findCart.services.push(obj.services[0]);
+                                findCart.totalAmount += obj.totalAmount;
+                                findCart.paidAmount += obj.totalAmount;
+                                findCart.totalItem++;
+                                await findCart.save();
+                                return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                        } else {
+                                const Data = await Cart.create(obj);
+                                return res.status(200).json({ status: 200, message: "Service successfully added to the cart.", data: Data });
+                        }
+                }
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
+exports.addToCartAddOnSingleService1 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
                 // console.log("userdata", userData);
@@ -1783,7 +1278,173 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
+exports.addToCartAddOnSingleService = async (req, res) => {
+        try {
+                const userData = await User.findOne({ _id: req.user._id });
+                if (!userData || !userData.city) {
+                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                }
+                let findPet;
+                if (req.body.pets) {
+                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                } else {
+                        findPet = await Pet.findOne({ user: userData._id }).populate('breed');
+                }
+                const findCart = await Cart.findOne({ userId: userData._id });
+                const findService = await service.findById({ _id: req.body._id, isAddOnServices: true });
 
+                if (!findService) {
+                        return res.status(404).json({ status: 404, message: "Service not found" });
+                }
+
+                let originalPrice = 0;
+                let discountActive = false;
+                let discountPrice = 0;
+                let discount = 0;
+
+                if (findService.variations && findService.variations.length > 0) {
+                        // const variation = findService.variations[0];
+                        const variation = findService.variations.find(v => v.size.toString() === findPet.size.toString());
+                        console.log("findService.variations", findService.variations);
+                        console.log("findPet.size", findPet.size);
+                        console.log("variation", variation);
+
+                        const month = req.body.month;
+                        if (month) {
+                                switch (month) {
+                                        case 'oneTime':
+                                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                discountActive = variation.oneTimediscountActive || false;
+                                                discountPrice = variation.oneTimediscountPrice || 0;
+                                                break;
+                                        case 'monthly':
+                                                originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                discountActive = variation.MonthlydiscountActive || false;
+                                                discountPrice = variation.MonthlydiscountPrice || 0;
+                                                break;
+                                        case 'threeMonth':
+                                                originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                discountActive = variation.threeMonthdiscountActive || false;
+                                                discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                break;
+                                        case 'sixMonth':
+                                                originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                discountActive = variation.sixMonthdiscountActive || false;
+                                                discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                break;
+                                        case 'twelveMonth':
+                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                discountActive = variation.twelveMonthdiscountActive || false;
+                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                break;
+                                        default:
+                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                }
+                        } else {
+                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                discountActive = variation.oneTimediscountActive || false;
+                                discountPrice = variation.oneTimediscountPrice || 0;
+                        }
+
+                        if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                                discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                                discount = Math.max(discount, 0);
+                                discount = Math.round(discount);
+                        }
+                }
+
+                let Charged = [];
+                let paidAmount = 0;
+                let totalAmount = 0;
+                let additionalFee = 0;
+
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                if (findService.type == "Service") {
+                        let price = discountActive ? discountPrice : originalPrice || 0;
+                        let quantity = req.body.quantity;
+
+                        if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                                return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                        }
+
+                        totalAmount = Number((price * quantity).toFixed(2));
+                        paidAmount = Number((totalAmount + additionalFee).toFixed(2));
+
+                        if (isNaN(totalAmount) || isNaN(paidAmount)) {
+                                return res.status(500).json({ status: 500, message: "Invalid total or paidAmount values." });
+                        }
+
+                        if (findCart) {
+                                const existingService = findCart.addOnServices.find(service => service.serviceId.equals(findService._id));
+
+                                if (existingService) {
+                                        existingService.quantity += quantity;
+                                        existingService.total = price * existingService.quantity;
+                                        findCart.totalAmount += price * quantity;
+                                        findCart.paidAmount += price * quantity;
+                                        await findCart.save();
+                                        return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                                }
+                        }
+
+                        let obj = {
+                                userId: userData._id,
+                                Charges: Charged,
+                                addOnServices: [{
+                                        serviceId: findService._id,
+                                        serviceType: findService.serviceType,
+                                        packageServices: req.body.packageServices,
+                                        price: price,
+                                        quantity: quantity,
+                                        total: totalAmount,
+                                        type: "Service",
+                                }],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                size: findPet.size,
+                                pets: findPet._id,
+                        };
+
+                        if (findCart) {
+                                findCart.addOnServices.push(obj.addOnServices[0]);
+                                findCart.totalAmount += obj.totalAmount;
+                                findCart.paidAmount += obj.totalAmount;
+                                findCart.totalItem++;
+                                await findCart.save();
+                                return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                        } else {
+                                const Data = await Cart.create(obj);
+                                return res.status(200).json({ status: 200, message: "Service successfully added to the cart.", data: Data });
+                        }
+                }
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
 exports.addToCartPackageNormal1 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -1919,7 +1580,6 @@ exports.addToCartPackageNormal1 = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.addToCartPackageEssential = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -1942,41 +1602,89 @@ exports.addToCartPackageEssential = async (req, res) => {
                         return res.status(404).json({ status: 404, message: "Package not found or package type missing." });
                 }
 
-                let additionalFee = 0;
-                const findCharges = await Charges.find({});
-
-                if (findCharges.length > 0) {
-                        for (let i = 0; i < findCharges.length; i++) {
-                                const charge = findCharges[i];
-                                if (!charge.cancelation) {
-                                        additionalFee += charge.discount ? charge.discountCharge : charge.charge;
-                                }
-                        }
-                }
-
                 let originalPrice = 0;
                 let discountActive = false;
                 let discountPrice = 0;
+                const month = req.body.month;
 
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        for (const variation of findPackage.variations) {
-                                if (variation.oneTimediscountActive) {
-                                        discountPrice += variation.oneTimediscountPrice || 0;
-                                        console.log("discountPrice", discountPrice);
-                                } else {
-                                        originalPrice += variation.oneTimeoriginalPrice || 0;
-                                        console.log("originalPrice", originalPrice);
+                        const variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        if (!variation) {
+                                return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
+                        }
+
+                        if (month) {
+                                switch (month) {
+                                        case 'oneTime':
+                                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                discountActive = variation.oneTimediscountActive || false;
+                                                discountPrice = variation.oneTimediscountPrice || 0;
+                                                break;
+                                        case 'monthly':
+                                                originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                discountActive = variation.MonthlydiscountActive || false;
+                                                discountPrice = variation.MonthlydiscountPrice || 0;
+                                                break;
+                                        case 'threeMonth':
+                                                originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                discountActive = variation.threeMonthdiscountActive || false;
+                                                discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                break;
+                                        case 'sixMonth':
+                                                originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                discountActive = variation.sixMonthdiscountActive || false;
+                                                discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                break;
+                                        case 'twelveMonth':
+                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                discountActive = variation.twelveMonthdiscountActive || false;
+                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                break;
+                                        default:
+                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
                                 }
+                        } else {
+                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                discountActive = variation.oneTimediscountActive || false;
+                                discountPrice = variation.oneTimediscountPrice || 0;
                         }
                 }
-                // let price = discountActive ? discountPrice : originalPrice || 0;
-                // console.log("price", price);
 
-                let price = originalPrice + discountPrice;
+                if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                        discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                }
+
+                let price = discountActive ? discountPrice : originalPrice;
                 let quantity = req.body.quantity;
 
                 if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
                         return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                }
+
+                let Charged = [];
+                let additionalFee = 0;
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
                 }
 
                 let totalAmount = price * quantity;
@@ -1996,23 +1704,16 @@ exports.addToCartPackageEssential = async (req, res) => {
                         total: totalAmount,
                 };
 
-                const breed = await Breed.findOne({ _id: findPet.breed });
-                if (!breed) {
-                        return res.status(404).json({ status: 404, message: 'Breed not found' });
-                }
-
-                const size = breed.size;
-
                 if (!findCart) {
                         const obj = {
                                 userId: userId,
-                                Charges: findCharges,
+                                Charges: findCharge,
                                 packages: [newPackage],
                                 totalAmount: totalAmount,
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
-                                size: size,
+                                size: findPet.size,
                                 pets: findPet._id,
                         };
 
@@ -2027,7 +1728,7 @@ exports.addToCartPackageEssential = async (req, res) => {
                         }
 
                         findCart.totalAmount += totalAmount;
-                        findCart.paidAmount += paidAmount;
+                        findCart.paidAmount += totalAmount;
                         findCart.totalItem += 1;
 
                         await findCart.save();
@@ -2039,7 +1740,6 @@ exports.addToCartPackageEssential = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.addToCartPackageStandard = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -2047,7 +1747,7 @@ exports.addToCartPackageStandard = async (req, res) => {
                 if (!userData) {
                         return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
                 }
-                const findCart = await Cart.findOne({ userId });
+                let findCart = await Cart.findOne({ userId });
                 const packageId = req.body.packageId;
 
                 let findPet;
@@ -2056,46 +1756,95 @@ exports.addToCartPackageStandard = async (req, res) => {
                 } else {
                         findPet = await Pet.findOne({ user: userData._id }).populate('breed');
                 }
-
                 const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage || !findPackage.packageType) {
                         return res.status(404).json({ status: 404, message: "Package not found or package type missing." });
                 }
 
-                let additionalFee = 0;
-                const findCharges = await Charges.find({});
-
-                if (findCharges.length > 0) {
-                        for (let i = 0; i < findCharges.length; i++) {
-                                const charge = findCharges[i];
-                                if (!charge.cancelation) {
-                                        additionalFee += charge.discount ? charge.discountCharge : charge.charge;
-                                }
-                        }
-                }
-
                 let originalPrice = 0;
                 let discountActive = false;
                 let discountPrice = 0;
+                const month = req.body.month;
 
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        for (const variation of findPackage.variations) {
-                                if (variation.oneTimediscountActive) {
-                                        discountPrice += variation.oneTimediscountPrice || 0;
-                                        console.log("discountPrice", discountPrice);
-                                } else {
-                                        originalPrice += variation.oneTimeoriginalPrice || 0;
-                                        console.log("originalPrice", originalPrice);
+                        const variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        if (!variation) {
+                                return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
+                        }
+
+                        if (month) {
+                                switch (month) {
+                                        case 'oneTime':
+                                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                discountActive = variation.oneTimediscountActive || false;
+                                                discountPrice = variation.oneTimediscountPrice || 0;
+                                                break;
+                                        case 'monthly':
+                                                originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                discountActive = variation.MonthlydiscountActive || false;
+                                                discountPrice = variation.MonthlydiscountPrice || 0;
+                                                break;
+                                        case 'threeMonth':
+                                                originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                discountActive = variation.threeMonthdiscountActive || false;
+                                                discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                break;
+                                        case 'sixMonth':
+                                                originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                discountActive = variation.sixMonthdiscountActive || false;
+                                                discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                break;
+                                        case 'twelveMonth':
+                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                discountActive = variation.twelveMonthdiscountActive || false;
+                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                break;
+                                        default:
+                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
                                 }
+                        } else {
+                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                discountActive = variation.oneTimediscountActive || false;
+                                discountPrice = variation.oneTimediscountPrice || 0;
                         }
                 }
 
-                let price = originalPrice + discountPrice;
+                if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                        discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                }
+
+                let price = discountActive ? discountPrice : originalPrice;
                 let quantity = req.body.quantity;
 
                 if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
                         return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                }
+
+                let Charged = [];
+                let additionalFee = 0;
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
                 }
 
                 let totalAmount = price * quantity;
@@ -2115,43 +1864,42 @@ exports.addToCartPackageStandard = async (req, res) => {
                         total: totalAmount,
                 };
 
-                const breed = await Breed.findOne({ _id: findPet.breed });
-                if (!breed) {
-                        return res.status(404).json({ status: 404, message: 'Breed not found' });
-                }
-
-                const size = breed.size;
-
-                if (findCart) {
-                        findCart.packages.push(newPackage);
-                        findCart.totalAmount += totalAmount;
-                        findCart.paidAmount += paidAmount;
-                        findCart.totalItem += 1;
-
-                        await findCart.save();
-                        return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
-                } else {
+                if (!findCart) {
                         const obj = {
                                 userId: userId,
-                                Charges: findCharges,
+                                Charges: findCharge,
                                 packages: [newPackage],
                                 totalAmount: totalAmount,
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
-                                size: size,
+                                size: findPet.size,
                                 pets: findPet._id,
                         };
 
-                        const newCart = await Cart.create(obj);
-                        return res.status(200).json({ status: 200, message: "Package added to a new cart.", data: newCart });
+                        findCart = await Cart.create(obj);
+                } else {
+                        const existingPackageIndex = findCart.packages.findIndex(pkg => pkg.packageId.equals(newPackage.packageId));
+                        if (existingPackageIndex !== -1) {
+                                findCart.packages[existingPackageIndex].quantity += quantity;
+                                findCart.packages[existingPackageIndex].total += totalAmount;
+                        } else {
+                                findCart.packages.push(newPackage);
+                        }
+
+                        findCart.totalAmount += totalAmount;
+                        findCart.paidAmount += totalAmount;
+                        findCart.totalItem += 1;
+
+                        await findCart.save();
                 }
+
+                return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
         } catch (error) {
                 console.error(error);
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.addToCartPackagePro = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -2159,7 +1907,7 @@ exports.addToCartPackagePro = async (req, res) => {
                 if (!userData) {
                         return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
                 }
-                const findCart = await Cart.findOne({ userId });
+                let findCart = await Cart.findOne({ userId });
                 const packageId = req.body.packageId;
 
                 let findPet;
@@ -2168,46 +1916,95 @@ exports.addToCartPackagePro = async (req, res) => {
                 } else {
                         findPet = await Pet.findOne({ user: userData._id }).populate('breed');
                 }
-
                 const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage || !findPackage.packageType) {
                         return res.status(404).json({ status: 404, message: "Package not found or package type missing." });
                 }
 
-                let additionalFee = 0;
-                const findCharges = await Charges.find({});
-
-                if (findCharges.length > 0) {
-                        for (let i = 0; i < findCharges.length; i++) {
-                                const charge = findCharges[i];
-                                if (!charge.cancelation) {
-                                        additionalFee += charge.discount ? charge.discountCharge : charge.charge;
-                                }
-                        }
-                }
-
                 let originalPrice = 0;
                 let discountActive = false;
                 let discountPrice = 0;
+                const month = req.body.month;
 
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        for (const variation of findPackage.variations) {
-                                if (variation.oneTimediscountActive) {
-                                        discountPrice += variation.oneTimediscountPrice || 0;
-                                        console.log("discountPrice", discountPrice);
-                                } else {
-                                        originalPrice += variation.oneTimeoriginalPrice || 0;
-                                        console.log("originalPrice", originalPrice);
+                        const variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        if (!variation) {
+                                return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
+                        }
+
+                        if (month) {
+                                switch (month) {
+                                        case 'oneTime':
+                                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                discountActive = variation.oneTimediscountActive || false;
+                                                discountPrice = variation.oneTimediscountPrice || 0;
+                                                break;
+                                        case 'monthly':
+                                                originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                discountActive = variation.MonthlydiscountActive || false;
+                                                discountPrice = variation.MonthlydiscountPrice || 0;
+                                                break;
+                                        case 'threeMonth':
+                                                originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                discountActive = variation.threeMonthdiscountActive || false;
+                                                discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                break;
+                                        case 'sixMonth':
+                                                originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                discountActive = variation.sixMonthdiscountActive || false;
+                                                discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                break;
+                                        case 'twelveMonth':
+                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                discountActive = variation.twelveMonthdiscountActive || false;
+                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                break;
+                                        default:
+                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
                                 }
+                        } else {
+                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                discountActive = variation.oneTimediscountActive || false;
+                                discountPrice = variation.oneTimediscountPrice || 0;
                         }
                 }
 
-                let price = originalPrice + discountPrice;
+                if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                        discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                }
+
+                let price = discountActive ? discountPrice : originalPrice;
                 let quantity = req.body.quantity;
 
                 if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
                         return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                }
+
+                let Charged = [];
+                let additionalFee = 0;
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
                 }
 
                 let totalAmount = price * quantity;
@@ -2227,43 +2024,42 @@ exports.addToCartPackagePro = async (req, res) => {
                         total: totalAmount,
                 };
 
-                const breed = await Breed.findOne({ _id: findPet.breed });
-                if (!breed) {
-                        return res.status(404).json({ status: 404, message: 'Breed not found' });
-                }
-
-                const size = breed.size;
-
-                if (findCart) {
-                        findCart.packages.push(newPackage);
-                        findCart.totalAmount += totalAmount;
-                        findCart.paidAmount += paidAmount;
-                        findCart.totalItem += 1;
-
-                        await findCart.save();
-                        return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
-                } else {
+                if (!findCart) {
                         const obj = {
                                 userId: userId,
-                                Charges: findCharges,
+                                Charges: findCharge,
                                 packages: [newPackage],
                                 totalAmount: totalAmount,
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
-                                size: size,
+                                size: findPet.size,
                                 pets: findPet._id,
                         };
 
-                        const newCart = await Cart.create(obj);
-                        return res.status(200).json({ status: 200, message: "Package added to a new cart.", data: newCart });
+                        findCart = await Cart.create(obj);
+                } else {
+                        const existingPackageIndex = findCart.packages.findIndex(pkg => pkg.packageId.equals(newPackage.packageId));
+                        if (existingPackageIndex !== -1) {
+                                findCart.packages[existingPackageIndex].quantity += quantity;
+                                findCart.packages[existingPackageIndex].total += totalAmount;
+                        } else {
+                                findCart.packages.push(newPackage);
+                        }
+
+                        findCart.totalAmount += totalAmount;
+                        findCart.paidAmount += totalAmount;
+                        findCart.totalItem += 1;
+
+                        await findCart.save();
                 }
+
+                return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
         } catch (error) {
                 console.error(error);
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.removeServiceFromCart = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -2354,7 +2150,6 @@ exports.removeServiceFromCart = async (req, res) => {
                         .send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.removeAddOnServiceFromCart = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -2424,7 +2219,6 @@ exports.removeAddOnServiceFromCart = async (req, res) => {
                 return res.status(500).json({ status: 500, message: "Server error: " + error.message });
         }
 };
-
 exports.removePackageFromCart = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -2515,212 +2309,6 @@ exports.removePackageFromCart = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
-// exports.addToCart = async (req, res) => {
-//         try {
-//                 const userData = await User.findOne({ _id: req.user._id });
-
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 }
-
-//                 let findCart = await Cart.findOne({ userId: userData._id });
-
-//                 if (!findCart) {
-//                         findCart = new Cart({
-//                                 userId: userData._id,
-//                                 totalItem: 0,
-//                                 freeService: [],
-//                                 Charges: [],
-//                                 packageServices: [],
-//                                 services: [],
-//                         });
-//                 }
-
-//                 const findService = await service.findById({ _id: req.body._id });
-
-//                 if (!findService) {
-//                         return res.status(404).send({ status: 404, message: "Service not found" });
-//                 }
-
-//                 const price = findService.discountActive ? findService.discountPrice : findService.originalPrice;
-//                 const quantity = req.body.quantity;
-//                 const total = price * quantity;
-
-//                 let additionalFee = 0;
-
-//                 let Charged = [];
-
-//                 const findCharge = await Charges.find({});
-//                 if (findCharge.length > 0) {
-//                         for (let i = 0; i < findCharge.length; i++) {
-//                                 let obj1 = {
-//                                         chargeId: findCharge[i]._id,
-//                                         charge: findCharge[i].charge,
-//                                         discountCharge: findCharge[i].discountCharge,
-//                                         discount: findCharge[i].discount,
-//                                         cancelation: findCharge[i].cancelation,
-//                                 };
-//                                 if (findCharge[i].cancelation == false) {
-//                                         if (findCharge[i].discount == true) {
-//                                                 additionalFee = additionalFee + findCharge[i].discountCharge;
-//                                         } else {
-//                                                 additionalFee = additionalFee + findCharge[i].charge;
-//                                         }
-//                                 }
-//                                 Charged.push(obj1);
-//                         }
-//                 }
-
-//                 const existingServiceIndex = findCart.services.findIndex(service => service.serviceId.equals(findService._id));
-
-//                 if (existingServiceIndex !== -1) {
-//                         findCart.services[existingServiceIndex].quantity += quantity;
-//                         findCart.services[existingServiceIndex].total += total;
-//                 } else {
-//                         findCart.services.push({
-//                                 serviceId: findService._id,
-//                                 price: price,
-//                                 quantity: quantity,
-//                                 total: total,
-//                                 type: "Service"
-//                         });
-//                 }
-
-//                 findCart.totalAmount += total;
-//                 findCart.paidAmount += total;
-
-//                 findCart.totalItem += quantity; 
-
-//                 await findCart.save();
-
-//                 if (findService.type === "Package") {
-//                         if (findService.packageType === "Edit") {
-//                                 let categoryServices = [];
-//                                 let findServicePackage = await servicePackage.findById({ _id: req.body.servicePackageId });
-//                                 if (!req.body || !req.body.packageServices) {
-//                                         return res.status(400).send({ status: 400, message: "Invalid request body" });
-//                                 }
-
-//                                 if (findServicePackage) {
-//                                         for (let i = 0; i < req.body.packageServices.length; i++) {
-//                                                 let findService1 = await service.findById({ _id: req.body.packageServices[i] });
-//                                                 let servicePrice = findService1.discountActive ? findService1.discountPrice : findService1.originalPrice;
-
-//                                                 let obj = {
-//                                                         service: findService1._id,
-//                                                         price: servicePrice,
-//                                                         quantity: 1,
-//                                                         total: servicePrice,
-//                                                 };
-
-//                                                 categoryServices.push(obj);
-//                                         }
-//                                 }
-
-//                                 let total = 0;
-//                                 for (let j = 0; j < categoryServices.length; j++) {
-//                                         total += categoryServices[j].total;
-//                                 }
-
-//                                 totalAmount = total.toFixed(2);
-//                                 paidAmount = (parseFloat(totalAmount) + parseFloat(additionalFee)).toFixed(2);
-
-//                                 const obj = {
-//                                         userId: userData._id,
-//                                         Charges: Charged, // Make sure to define Charged properly
-//                                         totalAmount: totalAmount,
-//                                         services: [{
-//                                                 serviceId: findService._id,
-//                                                 categoryId: findServicePackage.categoryId,
-//                                                 services: categoryServices,
-//                                                 quantity: 1,
-//                                                 total: total,
-//                                                 type: "Package",
-//                                                 packageType: "Edit",
-//                                         }],
-//                                         additionalFee: additionalFee,
-//                                         paidAmount: paidAmount,
-//                                         totalItem: 1,
-//                                 };
-
-//                                 const Data = await Cart.create(obj);
-//                                 return res.status(200).json({ status: 200, message: "Service successfully added to cart.", data: Data });
-//                         } else if (findService.packageType === "Normal") {
-//                                 let totalAmount = (price * quantity).toFixed(2);
-//                                 let paidAmount = (parseFloat(totalAmount) + parseFloat(additionalFee)).toFixed(2);
-
-//                                 const obj = {
-//                                         userId: userData._id,
-//                                         Charges: Charged, // Make sure to define Charged properly
-//                                         services: [{
-//                                                 serviceId: findService._id,
-//                                                 price: price,
-//                                                 quantity: quantity,
-//                                                 total: totalAmount,
-//                                                 type: "Package",
-//                                                 packageType: "Normal",
-//                                         }],
-//                                         totalAmount: totalAmount,
-//                                         additionalFee: additionalFee,
-//                                         paidAmount: paidAmount,
-//                                         totalItem: 1,
-//                                 };
-
-//                                 const Data = await Cart.create(obj);
-
-//                                 return res.status(200).json({ status: 200, message: "Service successfully added to cart.", data: Data });
-//                         } else if (findService.packageType === "Customise") {
-//                                 let services = [];
-//                                 if (findService.selectedCount === req.body.packageServices.length) {
-//                                         let totalAmount = (price * quantity).toFixed(2);
-//                                         let paidAmount = (parseFloat(totalAmount) + parseFloat(additionalFee)).toFixed(2);
-
-//                                         let obj = {
-//                                                 serviceId: findService._id,
-//                                                 packageServices: req.body.packageServices,
-//                                                 price: price,
-//                                                 quantity: quantity,
-//                                                 total: totalAmount,
-//                                                 type: "Package",
-//                                                 packageType: "Customise",
-//                                         };
-
-//                                         services.push(obj);
-
-//                                         let obj1 = {
-//                                                 userId: userData._id,
-//                                                 Charges: Charged, // Make sure to define Charged properly
-//                                                 services: services,
-//                                                 totalAmount: totalAmount,
-//                                                 additionalFee: additionalFee,
-//                                                 paidAmount: paidAmount,
-//                                                 totalItem: 1,
-//                                         };
-
-//                                         const Data = await Cart.create(obj1);
-
-//                                         return res.status(200).json({ status: 200, message: "Service successfully added to cart.", data: Data });
-//                                 } else {
-//                                         return res.status(201).send({ status: 201, message: `You can select only ${findService.selectedCount} not more than ${findService.selectedCount}` });
-//                                 }
-//                         }
-//                 } else {
-//                         return res.status(200).json({
-//                                 status: 200, message: "Service added/updated in the cart.", data: findCart,
-//                         });
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// };
-
-//
-
-
-//
-
 exports.addServiceToCart = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -2754,47 +2342,6 @@ exports.addServiceToCart = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
-// exports.updateServiceQuantity = async (req, res) => {
-//         try {
-//                 const { serviceId } = req.params;
-//                 const { quantity } = req.body;
-
-//                 if (quantity <= 0) {
-//                         return res.status(400).json({ status: 400, message: "Quantity must be a positive number greater than zero." });
-//                 }
-
-//                 const userData = await User.findOne({ _id: req.user._id });
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 }
-
-//                 const findCart = await Cart.findOne({ userId: userData._id });
-//                 if (!findCart) {
-//                         return res.status(404).send({ status: 404, message: "Cart not found" });
-//                 }
-
-//                 const existingService = findCart.services.find(service => service.serviceId.equals(serviceId));
-//                 if (!existingService) {
-//                         return res.status(404).send({ status: 404, message: "Service not found in the cart" });
-//                 }
-
-//                 const oldQuantity = existingService.quantity;
-//                 existingService.quantity = quantity;
-//                 existingService.total = existingService.price * quantity;
-
-//                 findCart.totalAmount = findCart.services.reduce((total, service) => total + service.total, 0);
-//                 findCart.paidAmount += (existingService.price * (quantity - oldQuantity));
-
-//                 await findCart.save();
-
-//                 return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// };
-
 exports.updateServiceQuantity1 = async (req, res) => {
         try {
                 const { Services, packageServices, AddOnServices, quantity } = req.body;
@@ -3022,7 +2569,6 @@ exports.updateServiceQuantity = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error: " + error.message });
         }
 };
-
 exports.updatePackageQuantity = async (req, res) => {
         try {
                 const { packageId, quantity } = req.body;
@@ -3048,8 +2594,7 @@ exports.updatePackageQuantity = async (req, res) => {
 
                         findCart.totalAmount = findCart.packages.reduce((total, pkg) => total + pkg.total, 0);
                         findCart.totalAmount += calculateServices2Total(findCart.services);
-
-                        findCart.paidAmount += existingPackage.price /** (quantity - oldQuantity);*/
+                        findCart.paidAmount += existingPackage.price /* (quantity - oldQuantity);*/
                         console.log("paidAmount*****", findCart.paidAmount);
                         await findCart.save();
 
@@ -3062,7 +2607,6 @@ exports.updatePackageQuantity = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 function calculateTotalAmount21(cart) {
         let total = 0;
 
@@ -3109,8 +2653,6 @@ function calculateTotalAmount21(cart) {
         console.warn(`Total calculated:`, total);
         return total;
 }
-
-
 exports.provideTip = async (req, res) => {
         try {
                 let userData = await User.findOne({ _id: req.user._id });
@@ -3324,85 +2866,6 @@ exports.applyWallet = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-// exports.addFreeServiceToCart = async (req, res) => {
-//         try {
-//                 let userData = await User.findOne({ _id: req.user._id });
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 } else {
-//                         let findCart = await Cart.findOne({ userId: userData._id });
-//                         if (findCart) {
-//                                 if (findCart.services.length == 0) {
-//                                         return res.status(404).json({ status: 404, message: "First add service in your cart.", data: {} });
-//                                 } else {
-//                                         const findFreeService = await freeService.findOne({ _id: req.body.freeServiceId, userId: req.user._id })
-//                                         if (findFreeService) {
-//                                                 let obj = {
-//                                                         freeServiceId: findFreeService._id
-//                                                 }
-//                                                 let update1 = await Cart.findByIdAndUpdate({ _id: findCart._id }, { $set: { freeServiceUsed: true, freeServiceCount: findCart.freeServiceCount + 1 }, $push: { freeService: obj } }, { new: true });
-//                                                 return res.status(200).json({ status: 200, message: "Free service add to cart Successfully.", data: update1 })
-//                                         } else {
-//                                                 return res.status(404).send({ status: 404, message: "Free service not found" });
-//                                         }
-//                                 }
-//                         } else {
-//                                 return res.status(404).json({ status: 404, message: "Cart is empty.", data: {} });
-//                         }
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// };
-
-
-// exports.addFreeServiceToCart = async (req, res) => {
-//         try {
-//                 const userId = req.user._id;
-//                 const freeServiceId = req.body.freeServiceId;
-
-//                 const userData = await User.findOne({ _id: userId });
-//                 if (!userData) {
-//                         return res.status(404).json({ status: 404, message: "User not found" });
-//                 }
-
-//                 const findCart = await Cart.findOne({ userId });
-//                 if (!findCart) {
-//                         return res.status(404).json({ status: 404, message: "Cart is empty.", data: {} });
-//                 }
-
-//                 const findFreeService = await freeService.findOne({ _id: freeServiceId, userId });
-//                 if (!findFreeService) {
-//                         return res.status(404).json({ status: 404, message: "Free service not found" });
-//                 }
-
-//                 const isServiceInCart = findCart.freeService.some((service) => service.freeServiceId.equals(freeServiceId));
-
-//                 if (isServiceInCart) {
-//                         return res.status(200).json({ status: 200, message: "Free service is already in the cart.", data: findCart });
-//                 }
-
-//                 findCart.totalAmount = 0;
-//                 findCart.additionalFee = 0;
-//                 findCart.paidAmount = 0;
-//                 findCart.totalItem = 0;
-//                 findCart.services = [];
-//                 findCart.freeServiceUsed = true;
-//                 findCart.freeServiceCount += 1;
-//                 findCart.freeService.push({ freeServiceId: findFreeService._id });
-
-//                 const update1 = await findCart.save();
-
-//                 return res
-//                         .status(200)
-//                         .json({ status: 200, message: "Free service added to cart successfully.", data: update1 });
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).json({ status: 500, message: "Server error: " + error.message });
-//         }
-// };
-
 exports.addFreeServiceToCart = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -3499,34 +2962,6 @@ exports.addAdressToCart = async (req, res) => {
                 return res.status(501).send({ status: 501, message: "server error.", data: {}, });
         }
 };
-// exports.addDateAndTimeToCart = async (req, res) => {
-//         try {
-//                 let userData = await User.findOne({ _id: req.user._id });
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found" });
-//                 } else {
-//                         let findCart = await Cart.findOne({ userId: userData._id });
-//                         if (findCart) {
-//                                 if (findCart.services.length == 0) {
-//                                         return res.status(404).send({ status: 404, message: "Your cart have no service found." });
-//                                 } else {
-//                                         const d = new Date(req.body.date);
-//                                         let text = d.toISOString();
-//                                         let update = await Cart.findByIdAndUpdate({ _id: findCart._id }, { $set: { Date: text, startTime: req.body.startTime, endTime: req.body.endTime } }, { new: true });
-//                                         if (update) {
-//                                                 return res.status(200).send({ status: 200, message: "Date And Time add to Cart successfully.", data: update });
-//                                         }
-//                                 }
-//                         } else {
-//                                 return res.status(404).send({ status: 404, message: "Your cart is not found." });
-//                         }
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
-//         }
-// };
-
 exports.addDateAndTimeToCart = async (req, res) => {
         try {
                 let userData = await User.findOne({ _id: req.user._id });
@@ -3569,50 +3004,6 @@ exports.addDateAndTimeToCart = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error: " + error.message });
         }
 };
-
-// exports.updateDateAndTimeByOrderId = async (req, res) => {
-//         try {
-//                 const orderId = req.body.orderId;
-//                 const newDate = req.body.date;
-//                 const startTime = req.body.startTime;
-//                 const endTime = req.body.endTime;
-
-//                 if (!orderId || !newDate || !startTime || !endTime) {
-//                         return res.status(400).send({ status: 400, message: "Invalid request data." });
-//                 }
-
-//                 let userData = await User.findOne({ _id: req.user._id });
-//                 console.log(userData);
-//                 if (!userData) {
-//                         return res.status(404).send({ status: 404, message: "User not found." });
-//                 }
-
-//                 const findOrder = await Order.findOne({ userId: userData._id, _id: orderId });
-
-//                 if (!findOrder) {
-//                         return res.status(404).send({ status: 404, message: "Order not found for the provided orderId." });
-//                 }
-
-//                 const d = new Date(newDate);
-//                 const text = d.toISOString();
-
-//                 const update = await Order.findByIdAndUpdate(
-//                         { _id: findOrder._id },
-//                         { $set: { Date: text, startTime: startTime, endTime: endTime } },
-//                         { new: true }
-//                 );
-
-//                 if (update) {
-//                         return res.status(200).send({ status: 200, message: "Date and time updated successfully.", data: update });
-//                 } else {
-//                         return res.status(500).send({ status: 500, message: "Failed to update date and time." });
-//                 }
-//         } catch (error) {
-//                 console.error(error);
-//                 return res.status(500).send({ status: 500, message: "Server error: " + error.message });
-//         }
-// };
-
 exports.updateDateAndTimeByOrderId = async (req, res) => {
         try {
                 const orderId = req.body.orderId;
@@ -3662,7 +3053,6 @@ exports.updateDateAndTimeByOrderId = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error: " + error.message });
         }
 };
-
 exports.checkout = async (req, res) => {
         try {
                 let userData = await User.findOne({ _id: req.user._id });
@@ -3746,7 +3136,6 @@ exports.checkout = async (req, res) => {
                 return res.status(501).send({ status: 501, message: "Server error.", data: {} });
         }
 };
-
 exports.placeOrder = async (req, res) => {
         try {
                 let findUserOrder = await orderModel.findOne({ orderId: req.params.orderId });
@@ -3783,7 +3172,6 @@ exports.deleteOrder = async (req, res) => {
                 return res.status(500).json({ status: 500, message: 'Server error', data: {} });
         }
 };
-
 exports.cancelOrder = async (req, res) => {
         try {
                 let findUserOrder = await orderModel.findOne({ orderId: req.params.orderId });
@@ -3829,7 +3217,6 @@ exports.getOngoingOrders = async (req, res) => {
                 return res.status(501).send({ status: 501, message: "server error.", data: {} });
         }
 };
-
 exports.getCompleteOrders = async (req, res) => {
         try {
                 const data = await orderModel.find({ userId: req.user._id, serviceStatus: "Complete" });
@@ -4370,49 +3757,6 @@ exports.getAllRatingsForMainCategory = async (req, res) => {
                 return res.status(500).json({ message: "Server error", status: 500, data: {} });
         }
 };
-
-// exports.getRatingCountsForMainCategory = async (req, res) => {
-//         try {
-//                 const mainCategory = req.params.mainCategory;
-//                 console.log("mainCategory", mainCategory);
-
-//                 const ratings = await Rating.find({ categoryId: mainCategory, type: "mainCategory" });
-//                 console.log("ratings", ratings);
-//                 const ratingCounts = await Rating.aggregate([
-//                         {
-//                                 // $match: { type: "mainCategory" }
-//                                 $match: { type: "mainCategory", categoryId: mainCategory }
-
-//                         },
-//                         {
-//                                 $group: {
-//                                         _id: null,
-//                                         rating1Count: { $sum: "$rating1" },
-//                                         rating2Count: { $sum: "$rating2" },
-//                                         rating3Count: { $sum: "$rating3" },
-//                                         rating4Count: { $sum: "$rating4" },
-//                                         rating5Count: { $sum: "$rating5" }
-//                                 }
-//                         },
-//                         {
-//                                 $project: {
-//                                         _id: 0
-//                                 }
-//                         }
-//                 ]);
-
-//                 if (ratingCounts.length === 0) {
-//                         return res.status(404).json({ status: 404, message: "No ratings found for mainCategory" });
-//                 }
-//                 const mainCategoryRatings = ratingCounts[0];
-
-//                 res.status(200).json({ status: 200, message: "Main category rating counts", data: mainCategoryRatings });
-//         } catch (error) {
-//                 console.error(error);
-//                 res.status(500).json({ status: 500, message: "Server error", data: {} });
-//         }
-// };
-
 exports.getRatingCountsForAllMainCategory = async (req, res) => {
         try {
                 const ratings = await Rating.find({ type: "mainCategory" });
@@ -4734,14 +4078,11 @@ exports.getFrequentlyAddedServices = async (req, res) => {
                 });
         }
 };
-
-//helper function
 const generateTicketID = () => {
         const timestamp = Date.now();
         const uniqueID = Math.floor(Math.random() * 10000);
         return `${timestamp}-${uniqueID}`;
 };
-
 exports.reportIssue = async (req, res) => {
         const { issueType, description } = req.body;
 
@@ -4767,7 +4108,6 @@ exports.reportIssue = async (req, res) => {
                 return res.status(500).json({ error: 'Error reporting issue' });
         }
 };
-
 exports.getIssueReports = async (req, res) => {
         try {
                 const issueReports = await IssueReport.find();
@@ -4777,7 +4117,6 @@ exports.getIssueReports = async (req, res) => {
                 return res.status(500).json({ error: 'Error fetching issue reports' });
         }
 };
-
 exports.getAllSlots1 = async (req, res) => {
         try {
                 const userId = req.user._id;
@@ -4977,7 +4316,6 @@ exports.getAllSlots = async (req, res) => {
                 });
         }
 };
-
 exports.getSlotById = async (req, res) => {
         try {
                 const slot = await Slot.findById(req.params.id);
@@ -5004,7 +4342,6 @@ exports.getSlotById = async (req, res) => {
                 });
         }
 };
-
 exports.getAllCities = async (req, res) => {
         try {
                 const cities = await City.find();
@@ -5019,7 +4356,6 @@ exports.getAllCities = async (req, res) => {
                 res.status(500).json({ message: 'Server error' });
         }
 };
-
 exports.getCityById = async (req, res) => {
         try {
                 const city = await City.findById(req.params.id);
@@ -5038,7 +4374,6 @@ exports.getCityById = async (req, res) => {
                 res.status(500).json({ message: 'Server error' });
         }
 };
-
 exports.getAllAreas = async (req, res) => {
         try {
                 const areas = await Area.find();
@@ -5053,7 +4388,6 @@ exports.getAllAreas = async (req, res) => {
                 res.status(500).json({ message: 'Server error' });
         }
 };
-
 exports.getAreaById = async (req, res) => {
         try {
                 const area = await Area.findById(req.params.id);
@@ -5072,7 +4406,6 @@ exports.getAreaById = async (req, res) => {
                 res.status(500).json({ message: 'Server error' });
         }
 };
-
 exports.getAreasByCityId = async (req, res) => {
         try {
                 const cityId = req.params.cityId;
@@ -5098,8 +4431,6 @@ exports.getAreasByCityId = async (req, res) => {
                 res.status(500).json({ message: 'Server error' });
         }
 };
-
-
 exports.getStaticBanner = async (req, res) => {
         try {
                 const userFullName = req.user.fullName;
@@ -5129,7 +4460,6 @@ exports.getStaticBanner = async (req, res) => {
                 return res.status(500).json({ status: 500, message: "Server error.", data: {} });
         }
 };
-
 exports.updateEditPackageInCart1 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -5178,7 +4508,6 @@ exports.updateEditPackageInCart1 = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.updateEditPackageInCart = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -5239,7 +4568,6 @@ exports.updateEditPackageInCart = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
 exports.updateCustomizePackageInCart = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -5304,55 +4632,6 @@ exports.updateCustomizePackageInCart = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-
-// function calculateTotal(package) {
-//         let total = 0;
-
-//         if (Array.isArray(package.services)) {
-//                 total += calculateServiceTotal(package.services);
-//         }
-
-//         if (Array.isArray(package.addOnServices)) {
-//                 total += calculateServiceTotal(package.addOnServices);
-
-//         }
-
-//         return total;
-// }
-
-// function calculateTotalAmount(cart) {
-//         let totalAmount = 0;
-
-//         for (const pkg of cart.packages) {
-//                 totalAmount += pkg.total;
-
-//         }
-
-//         return totalAmount;
-// }
-
-// function calculateServiceTotal(services) {
-//         let total = 0;
-
-//         if (Array.isArray(services)) {
-//                 for (const service of services) {
-//                         if (service.selected == true) {
-//                                 if (service.discountActive == true) {
-
-//                                         total += service.discountPrice * 1;
-
-//                                 } else {
-
-//                                         total += service.originalPrice * 1;
-
-//                                 }
-//                         }
-//                 }
-//         }
-
-//         return total;
-// }
-
 function calculateTotalAmount(cart) {
         let totalAmount = 0;
 
@@ -5364,7 +4643,6 @@ function calculateTotalAmount(cart) {
 
         return totalAmount;
 }
-
 function calculateTotal(package) {
         let total = 0;
 
@@ -5375,7 +4653,6 @@ function calculateTotal(package) {
 
         return total;
 }
-
 function calculateServiceTotal(services) {
         let total = 0;
 
@@ -5393,7 +4670,6 @@ function calculateServiceTotal(services) {
         console.log("Total Service Price:", total);
         return total;
 }
-
 function calculateServices2Total(services) {
         let total = 0;
 
@@ -5408,7 +4684,6 @@ function calculateServices2Total(services) {
         console.log("Total Service Price:", total);
         return total;
 }
-
 exports.getBreeds = async (req, res) => {
         try {
                 const breeds = await Breed.find().populate('mainCategory');
@@ -5515,7 +4790,6 @@ exports.getAllNotificationsForUser = async (req, res) => {
         }
 };
 
-
 function haversineDistance(coords1, coords2) {
         const toRad = (x) => x * Math.PI / 180;
 
@@ -5533,7 +4807,6 @@ function haversineDistance(coords1, coords2) {
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
 }
-
 async function assignOrderToPartner() {
         try {
                 const orders = await Order.find({ partnerId: { $exists: false } }).populate('packages.packageId')
@@ -5679,18 +4952,19 @@ async function assignOrderToPartner() {
                         let assigned = false;
                         for (const partner of availablePartners) {
                                 const distance = haversineDistance(orderLocation, partner.currentLocation.coordinates);
-                                // console.log("distance", distance);
+                                console.log("distance", distance);
                                 const maxDistanceObj = distanceCriteria.find(criteria => criteria.transportMode === partner.transportation);
-                                // console.log("maxDistanceObj", maxDistanceObj);
+                                console.log("maxDistanceObj", maxDistanceObj);
                                 if (maxDistanceObj && distance <= maxDistanceObj.radiusInKms) {
                                         const partnerAttendance = attendances.find(att => att.userId.equals(partner._id));
                                         if (partnerAttendance) {
                                                 const mainCategoryIdStr = partnerAttendance.mainCategoryId.toString();
+                                                console.log("partnerAttendance", partnerAttendance);
                                                 console.log("categorizedSlots", categorizedSlots);
                                                 console.log("partnerAttendance.mainCategoryId", partnerAttendance.mainCategoryId);
                                                 console.log("mainCategoryIdStr", mainCategoryIdStr);
 
-                                                if (categorizedSlots[mainCategoryIdStr] && categorizedSlots[mainCategoryIdStr].length > 0) {
+                                                // if (categorizedSlots[mainCategoryIdStr] && categorizedSlots[mainCategoryIdStr].length > 0) {
 
                                                         order.partnerId = partner._id;
                                                         order.partnerLocation.coordinates = partner.currentLocation.coordinates;
@@ -5700,7 +4974,7 @@ async function assignOrderToPartner() {
                                                         break;
                                                 }
                                         }
-                                }
+                                // }
                         }
                         if (!assigned) {
                                 console.log(`No suitable partner found for order ${order._id}`);

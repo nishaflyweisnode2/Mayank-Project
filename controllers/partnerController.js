@@ -457,7 +457,7 @@ exports.getSlotById = async (req, res) => {
                 });
         }
 };
-async function createAttendanceRecord() {
+async function createAttendanceRecord1() {
         try {
                 const usersData = await User.find({ userType: "PARTNER" });
                 if (!usersData || usersData.length === 0) {
@@ -490,6 +490,57 @@ async function createAttendanceRecord() {
 
                         console.log(`Attendance record created for user ${userData._id}`);
                 }
+        } catch (error) {
+                console.error(error);
+                return { status: 500, message: 'Server error' };
+        }
+}
+async function createAttendanceRecord() {
+        try {
+                const usersData = await User.find({ userType: "PARTNER" });
+                if (!usersData || usersData.length === 0) {
+                        console.log("No users found");
+                        return;
+                }
+
+                const slots = await Slot.find();
+
+                const createRecordForDate = async (date) => {
+                        for (const userData of usersData) {
+                                const existingRecord = await Attendance.findOne({ userId: userData._id, date: date, mainCategoryId: userData.currentRole });
+                                if (existingRecord) {
+                                        console.log(`Attendance record already exists for user ${userData._id} on date ${date}`);
+                                        continue;
+                                }
+
+                                const attendanceRecord = new Attendance({
+                                        userId: userData._id,
+                                        mainCategoryId: userData.currentRole,
+                                        date: date,
+                                        timeSlots: slots.map(slot => ({
+                                                startTime: slot.timeFrom,
+                                                endTime: slot.timeTo,
+                                                available: false
+                                        }))
+                                });
+
+                                await attendanceRecord.save();
+                                console.log(`Attendance record created for user ${userData._id} on date ${date}`);
+                        }
+                };
+
+                for (let i = 0; i < 7; i++) {
+                        const futureDate = new Date();
+                        futureDate.setDate(futureDate.getDate() + i);
+                        const futureDateString = futureDate.toISOString().split('T')[0];
+                        await createRecordForDate(futureDateString);
+                }
+
+                const oldDate = new Date();
+                oldDate.setDate(oldDate.getDate() - 7);
+                const oldDateString = oldDate.toISOString().split('T')[0];
+                await Attendance.deleteMany({ date: oldDateString });
+
         } catch (error) {
                 console.error(error);
                 return { status: 500, message: 'Server error' };

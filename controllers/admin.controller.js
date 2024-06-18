@@ -1512,336 +1512,7 @@ exports.removeItem = async (req, res) => {
         return res.status(200).json({ message: "Item Deleted Successfully !" });
     }
 };
-// exports.createService = async (req, res) => {
-//     try {
-//         const findMainCategory = await mainCategory.findById({ _id: req.body.mainCategoryId });
-//         if (!findMainCategory) {
-//             return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
-//         } else {
-//             let findCategory, findSubCategory;
-//             if (req.body.categoryId != (null || undefined)) {
-//                 findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: req.body.categoryId });
-//                 if (!findCategory) {
-//                     return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
-//                 }
-//             } else {
-//                 let findService = await service.findOne({ title: req.body.title, mainCategoryId: findMainCategory._id, type: req.body.type, packageType: req.body.packageType });
-//                 if (findService) {
-//                     return res.status(409).json({ message: "Service already exit.", status: 409, data: {} });
-//                 }
-//             }
-//             if (req.body.subCategoryId != (null || undefined)) {
-//                 findSubCategory = await subCategory.findOne({ _id: req.body.subCategoryId, mainCategoryId: findMainCategory._id, categoryId: findCategory._id, })
-//                 if (!findSubCategory) {
-//                     return res.status(404).json({ message: "sub category Not Found", status: 404, data: {} });
-//                 }
-//                 let findService = await service.findOne({ title: req.body.title, mainCategoryId: findMainCategory._id, type: req.body.type, packageType: req.body.packageType, categoryId: findCategory._id, subCategoryId: findSubCategory._id, });
-//                 if (findService) {
-//                     return res.status(409).json({ message: "Service already exit.", status: 409, data: {} });
-//                 }
-//             }
-//             let discountPrice = 0, discount = 0, totalTime;
-//             if (req.body.timeInMin > 60) {
-//                 const hours = Math.floor(req.body.timeInMin / 60);
-//                 const minutes = req.body.timeInMin % 60;
-//                 totalTime = `${hours} hr ${minutes} min`
-//             } else {
-//                 const minutes = req.body.timeInMin % 60;
-//                 totalTime = `00 hr ${minutes} min`
-//             }
-//             if (req.body.discountActive == "true") {
-//                 discountPrice = Number((req.body.originalPrice) - ((Number(req.body.originalPrice) * Number(req.body.discount)) / 100)).toFixed();
-//                 discount = req.body.discount;
-//             } else {
-//                 discountPrice = discountPrice;
-//                 discount = discount;
-//             }
-//             let images = [];
-//             if (req.files) {
-//                 for (let j = 0; j < req.files.length; j++) {
-//                     let obj = {
-//                         img: req.files[j].path
-//                     }
-//                     images.push(obj)
-//                 }
-//             }
-//             let items = [], services = [];
-//             if (req.body.services != (null || undefined)) {
-//                 for (let i = 0; i < req.body.services.length; i++) {
-//                     let findItem = await service.findById({ _id: req.body.services[i] });
-//                     if (findItem) {
-//                         let item1 = {
-//                             service: findItem._id
-//                         }
-//                         services.push(item1);
-//                     } else {
-//                         return res.status(404).json({ message: `service Not Found`, status: 404, data: {} });
-//                     }
-//                 }
-//             }
-//             if (req.body.items != (null || undefined)) {
-//                 for (let i = 0; i < req.body.items.length; i++) {
-//                     let findItem = await item.findById({ _id: req.body.items[i] });
-//                     if (findItem) {
-//                         let item1 = {
-//                             item: findItem._id
-//                         }
-//                         items.push(item1);
-//                     } else {
-//                         return res.status(404).json({ message: `item Not Found`, status: 404, data: {} });
-//                     }
-//                 }
-//             }
-//             if (req.body.type == "Service") {
-//                 // const descriptions = req.body.description || [];
-//                 // const descriptionObjects = descriptions.map((description, index) => ({
-//                 //     _id: index + 1,
-//                 //     text: description,
-//                 // }));
-//                 // console.log("Description:", descriptionObjects);
-
-//                 const data = {
-//                     mainCategoryId: findMainCategory._id,
-//                     categoryId: findCategory._id,
-//                     subCategoryId: findSubCategory._id,
-//                     title: req.body.title,
-//                     description: req.body.description /*descriptionObjects*/,
-//                     originalPrice: req.body.originalPrice,
-//                     discountActive: req.body.discountActive,
-//                     discount: req.body.discount,
-//                     discountPrice: discountPrice,
-//                     totalTime: totalTime,
-//                     timeInMin: req.body.timeInMin,
-//                     images: images,
-//                     E4uSafety: req.body.E4uSafety,
-//                     thingsToKnow: req.body.thingsToKnow,
-//                     E4uSuggestion: req.body.E4uSuggestion,
-//                     type: req.body.type,
-//                     items: items
-//                 };
-//                 const category = await service.create(data);
-//                 return res.status(200).json({ message: "Service add successfully.", status: 200, data: category });
-//             }
-//             if (req.body.type == "Package") {
-//                 if (req.body.packageType == "Customise") {
-//                     const data = {
-//                         mainCategoryId: findMainCategory._id,
-//                         categoryId: findCategory._id,
-//                         subCategoryId: findSubCategory._id,
-//                         title: req.body.title,
-//                         description: req.body.description,
-//                         originalPrice: req.body.originalPrice,
-//                         discountActive: req.body.discountActive,
-//                         discount: req.body.discount,
-//                         discountPrice: discountPrice,
-//                         totalTime: totalTime,
-//                         timeInMin: req.body.timeInMin,
-//                         images: images,
-//                         E4uSafety: req.body.E4uSafety,
-//                         thingsToKnow: req.body.thingsToKnow,
-//                         E4uSuggestion: req.body.E4uSuggestion,
-//                         type: "Package",
-//                         packageType: "Customise",
-//                         selected: true,
-//                         selectedCount: req.body.selectedCount,
-//                         services: services,
-//                         items: items
-//                     };
-//                     const category = await service.create(data);
-//                     return res.status(200).json({ message: "Service add successfully.", status: 200, data: category });
-//                 }
-//                 if (req.body.packageType == "Normal") {
-//                     const data = {
-//                         mainCategoryId: findMainCategory._id,
-//                         categoryId: findCategory._id,
-//                         subCategoryId: findSubCategory._id,
-//                         title: req.body.title,
-//                         description: req.body.description,
-//                         originalPrice: req.body.originalPrice,
-//                         discountActive: req.body.discountActive,
-//                         discount: req.body.discount,
-//                         discountPrice: discountPrice,
-//                         totalTime: totalTime,
-//                         timeInMin: req.body.timeInMin,
-//                         images: images,
-//                         E4uSafety: req.body.E4uSafety,
-//                         thingsToKnow: req.body.thingsToKnow,
-//                         E4uSuggestion: req.body.E4uSuggestion,
-//                         type: "Package",
-//                         packageType: "Normal",
-//                         selected: false,
-//                         selectedCount: 0,
-//                         services: services,
-//                         items: items
-//                     };
-//                     const category = await service.create(data);
-//                     return res.status(200).json({ message: "Service add successfully.", status: 200, data: category });
-//                 }
-//                 if (req.body.packageType == "Edit") {
-//                     const data = {
-//                         mainCategoryId: findMainCategory._id,
-//                         categoryId: findCategory._id,
-//                         subCategoryId: findSubCategory._id,
-//                         title: req.body.title,
-//                         description: req.body.description,
-//                         originalPrice: req.body.originalPrice,
-//                         discountActive: req.body.discountActive,
-//                         discount: req.body.discount,
-//                         discountPrice: discountPrice,
-//                         totalTime: totalTime,
-//                         timeInMin: req.body.timeInMin,
-//                         images: images,
-//                         E4uSafety: req.body.E4uSafety,
-//                         thingsToKnow: req.body.thingsToKnow,
-//                         E4uSuggestion: req.body.E4uSuggestion,
-//                         type: "Package",
-//                         packageType: "Edit",
-//                     };
-//                     let findCategories = await Category.find({ mainCategoryId: findMainCategory._id });
-//                     if (findCategories.length == 0) {
-//                         return res.status(404).json({ message: "first add Category in this main category", status: 404, data: {} });
-//                     }
-//                     const saveService = await service.create(data);
-//                     if (saveService) {
-//                         for (let i = 0; i < findCategories.length; i++) {
-//                             let findServices = await service.find({ categoryId: findCategories[i]._id });
-//                             if (findServices.length == 0) {
-//                                 return res.status(404).json({ message: "first add Services in categories", status: 404, data: {} });
-//                             }
-//                             let services = [];
-//                             for (let j = 0; j < findServices.length; j++) {
-//                                 let obj = {
-//                                     service: findServices[j]._id,
-//                                 }
-//                                 services.push(obj)
-//                             }
-//                             let obj1 = {
-//                                 serviceId: saveService._id,
-//                                 categoryId: findCategories[i]._id,
-//                                 services: services,
-//                             }
-//                             let savePackage = await servicePackage.create(obj1);
-//                             if (savePackage) {
-//                                 await service.findByIdAndUpdate({ _id: saveService._id }, { $push: { servicePackageId: savePackage._id } }, { new: true })
-//                             }
-//                         }
-//                         let x = await service.findById({ _id: saveService._id })
-//                         return res.status(200).json({ message: "Service add successfully.", status: 200, data: x });
-//                     }
-//                 }
-//             }
-
-//         }
-//     } catch (error) {
-//         return res.status(500).json({ status: 500, message: "internal server error ", data: error.message, });
-//     }
-// };
-
 exports.createService1 = async (req, res) => {
-    try {
-        const findMainCategory = await mainCategory.findById(req.body.mainCategoryId);
-
-        if (!findMainCategory) {
-            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
-        }
-
-        let findCategory;
-        const findSubCategories = [];
-
-        if (req.body.categoryId) {
-            findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: req.body.categoryId });
-
-            if (!findCategory) {
-                return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
-            }
-        } else {
-            const existingService = await service.findOne({
-                title: req.body.title,
-                mainCategoryId: findMainCategory._id,
-                type: req.body.type,
-                packageType: req.body.packageType,
-            });
-
-            if (existingService) {
-                return res.status(409).json({ message: "Service already exists.", status: 409, data: {} });
-            }
-        }
-
-        if (req.body.subCategoryId && Array.isArray(req.body.subCategoryId)) {
-            for (const subCategoryId of req.body.subCategoryId) {
-                const findSubCategory = await subCategory.findOne({
-                    _id: subCategoryId,
-                    mainCategoryId: findMainCategory._id,
-                    categoryId: findCategory._id,
-                });
-
-                if (!findSubCategory) {
-                    return res.status(404).json({ message: "Subcategory Not Found", status: 404, data: {} });
-                }
-
-                findSubCategories.push(findSubCategory);
-            }
-        }
-
-        let discountPrice, originalPrice, discount = 0, totalTime;
-        if (req.body.timeInMin > 60) {
-            const hours = Math.floor(req.body.timeInMin / 60);
-            const minutes = req.body.timeInMin % 60;
-            totalTime = `${hours} hr ${minutes} min`;
-        } else {
-            const minutes = req.body.timeInMin % 60;
-            totalTime = `00 hr ${minutes} min`;
-        }
-
-        if (req.body.discountActive === "true") {
-            originalPrice = req.body.originalPrice;
-            discountPrice = req.body.discountPrice;
-
-            if (originalPrice && discountPrice) {
-                discount = ((originalPrice - discountPrice) / originalPrice) * 100;
-                discount = Math.max(discount, 0);
-                discount = Math.round(discount);
-            }
-        }
-
-        let images = [];
-        if (req.files) {
-            for (let j = 0; j < req.files.length; j++) {
-                let obj = {
-                    img: req.files[j].path,
-                };
-                images.push(obj);
-            }
-        }
-
-        const data = {
-            mainCategoryId: findMainCategory._id,
-            categoryId: findCategory ? findCategory._id : null,
-            subCategoryId: findSubCategories.map(subCategory => subCategory._id),
-            title: req.body.title,
-            description: req.body.description,
-            originalPrice: req.body.originalPrice,
-            discountActive: req.body.discountActive,
-            discount: discount,
-            discountPrice: discountPrice,
-            totalTime: totalTime,
-            timeInMin: req.body.timeInMin,
-            images: images,
-            type: req.body.type,
-            status: req.body.status,
-            isAddOnServices: req.body.isAddOnServices
-        };
-        console.log("597984", data);
-        const category = await service.create(data);
-
-        return res.status(200).json({ message: "Service added successfully.", status: 200, data: category });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
-    }
-};
-
-exports.createService = async (req, res) => {
     try {
         const { mainCategoryId, categoryId, subCategoryId, size, title, description, timeInMin, isAddOnServices, variations, status } = req.body;
 
@@ -1948,7 +1619,121 @@ exports.createService = async (req, res) => {
         return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
     }
 };
+exports.createService = async (req, res) => {
+    try {
+        const { mainCategoryId, categoryId, subCategoryId, size, title, description, timeInMin, isAddOnServices, variations, status } = req.body;
 
+        const findMainCategory = await mainCategory.findById(mainCategoryId);
+        if (!findMainCategory) {
+            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
+        }
+
+        let findCategory;
+        if (categoryId) {
+            findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: categoryId });
+            if (!findCategory) {
+                return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
+            }
+        }
+
+        if (size) {
+            const finSize = await Size.findOne({ _id: size });
+            if (!finSize) {
+                return res.status(404).json({ message: "Size Not Found", status: 404, data: {} });
+            }
+        }
+
+        const existingService = await service.findOne({
+            title: req.body.title,
+            mainCategoryId: findMainCategory._id,
+            type: req.body.type,
+            size: req.body.size,
+        });
+
+        if (existingService) {
+            return res.status(409).json({ message: "Service already exists.", status: 409, data: {} });
+        }
+
+        const findSubCategories = [];
+        if (subCategoryId && Array.isArray(subCategoryId)) {
+            for (const subId of subCategoryId) {
+                const findSubCategory = await subCategory.findOne({
+                    _id: subId,
+                    mainCategoryId: findMainCategory._id,
+                    categoryId: findCategory ? findCategory._id : null,
+                });
+
+                if (!findSubCategory) {
+                    return res.status(404).json({ message: "Subcategory Not Found", status: 404, data: {} });
+                }
+
+                findSubCategories.push(findSubCategory);
+            }
+        }
+
+        const calculateDiscount = (originalPrice, discountPrice) => {
+            if (originalPrice && discountPrice) {
+                let discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                discount = Math.max(discount, 0);
+                discount = Math.round(discount);
+                return discount;
+            }
+            return 0;
+        };
+
+        const variationsWithDiscounts = [];
+        for (const variation of variations) {
+            if (variation.size) {
+                const sizeExists = await Size.findOne({ _id: variation.size });
+                if (!sizeExists) {
+                    return res.status(404).json({ message: `Size Not Found for variation`, status: 404, data: {} });
+                }
+            }
+
+            variationsWithDiscounts.push({
+                ...variation,
+                oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
+                Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
+                threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
+                sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
+                twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
+            });
+        }
+
+        let totalTime;
+        if (timeInMin > 60) {
+            const hours = Math.floor(timeInMin / 60);
+            const minutes = timeInMin % 60;
+            totalTime = `${hours} hr ${minutes} min`;
+        } else {
+            const minutes = timeInMin % 60;
+            totalTime = `00 hr ${minutes} min`;
+        }
+
+        const data = {
+            mainCategoryId: findMainCategory._id,
+            categoryId: findCategory ? findCategory._id : null,
+            subCategoryId: findSubCategories.map(subCategory => subCategory._id),
+            size,
+            title,
+            description,
+            timeInMin,
+            totalTime,
+            variations: variationsWithDiscounts,
+            images: req.files ? req.files.map(file => ({ img: file.path })) : [],
+            type: 'Service',
+            status: status,
+            isAddOnServices: isAddOnServices,
+        };
+
+        const Service = await service.create(data);
+
+        return res.status(200).json({ message: "Service added successfully.", status: 200, data: Service });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
 // exports.getService = async (req, res) => {
 //     try {
 //         const findMainCategory = await mainCategory.findById({ _id: req.params.mainCategoryId });
@@ -2454,7 +2239,6 @@ exports.createPackage1 = async (req, res) => {
         return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
     }
 };
-
 exports.createPackage = async (req, res) => {
     try {
         let { mainCategoryId, categoryId, subCategoryId, size, title, packageType, description, timeInMin, services, addOnServices, validUpTo, status, variations } = req.body;
@@ -2593,6 +2377,7 @@ exports.createPackage = async (req, res) => {
                     }
 
                     variations.push({
+                        size: findService.size,
                         walksPerDay,
                         daysPerWeek,
                         oneTimeoriginalPrice,
@@ -2615,7 +2400,36 @@ exports.createPackage = async (req, res) => {
             }
         }
 
-        const variationsWithDiscounts = variations.map(variation => {
+        // const variationsWithDiscounts = variations.map(variation => {
+        //     const calculateDiscount = (originalPrice, discountPrice) => {
+        //         if (originalPrice && discountPrice) {
+        //             let discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+        //             discount = Math.max(discount, 0);
+        //             discount = Math.round(discount);
+        //             return discount;
+        //         }
+        //         return 0;
+        //     };
+
+        //     return {
+        //         ...variation,
+        //         oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
+        //         Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
+        //         threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
+        //         sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
+        //         twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
+        //     };
+        // });
+
+        const variationsWithDiscounts = [];
+        for (const variation of variations) {
+            if (variation.size) {
+                const sizeExists = await Size.findOne({ _id: variation.size });
+                if (!sizeExists) {
+                    return res.status(404).json({ message: `Size Not Found for variation`, status: 404, data: {} });
+                }
+            }
+
             const calculateDiscount = (originalPrice, discountPrice) => {
                 if (originalPrice && discountPrice) {
                     let discount = ((originalPrice - discountPrice) / originalPrice) * 100;
@@ -2626,15 +2440,15 @@ exports.createPackage = async (req, res) => {
                 return 0;
             };
 
-            return {
+            variationsWithDiscounts.push({
                 ...variation,
                 oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
                 Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
                 threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
                 sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
                 twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
-            };
-        });
+            });
+        }
 
         if (size) {
             const findSize = await Size.findOne({ _id: size });
@@ -3096,6 +2910,7 @@ exports.updatePackage = async (req, res) => {
 
                 if (findService) {
                     updatedVariations.push({
+                        size: findService.size,
                         walksPerDay: findService.walksPerDay || 0,
                         daysPerWeek: findService.daysPerWeek || 0,
                         oneTimeoriginalPrice: findService.oneTimeoriginalPrice || 0,
@@ -3120,14 +2935,43 @@ exports.updatePackage = async (req, res) => {
             updatedVariations = variations;
         }
 
-        const variationsWithDiscounts = updatedVariations.map(variation => ({
-            ...variation,
-            oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
-            Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
-            threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
-            sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
-            twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
-        }));
+        // const variationsWithDiscounts = updatedVariations.map(variation => ({
+        //     ...variation,
+        //     oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
+        //     Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
+        //     threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
+        //     sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
+        //     twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
+        // }));
+
+        const variationsWithDiscounts = [];
+        for (const variation of updatedVariations) {
+            if (variation.size) {
+                const sizeExists = await Size.findOne({ _id: variation.size });
+                if (!sizeExists) {
+                    return res.status(404).json({ message: `Size Not Found for variation`, status: 404 });
+                }
+            }
+
+            const calculateDiscount = (originalPrice, discountPrice) => {
+                if (originalPrice && discountPrice) {
+                    let discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                    discount = Math.max(discount, 0);
+                    discount = Math.round(discount);
+                    return discount;
+                }
+                return 0;
+            };
+
+            variationsWithDiscounts.push({
+                ...variation,
+                oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
+                Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
+                threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
+                sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
+                twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
+            });
+        }
 
         let preparedAddOnServices = [];
         if (addOnServices && Array.isArray(addOnServices)) {
@@ -3579,9 +3423,9 @@ exports.updateService = async (req, res) => {
         if (!Service) {
             return res.status(404).json({ message: "Service not found", status: 404, data: {} });
         }
-
+        let findMainCategory;
         if (mainCategoryId) {
-            const findMainCategory = await mainCategory.findById(mainCategoryId);
+            findMainCategory = await mainCategory.findById(mainCategoryId);
             if (!findMainCategory) {
                 return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
             }
@@ -3625,8 +3469,40 @@ exports.updateService = async (req, res) => {
             const minutes = timeInMin % 60;
             Service.totalTime = `${hours} hr ${minutes} min`;
         }
-        if (variations) {
-            const variationsWithDiscounts = variations.map(variation => {
+        // if (variations) {
+        //     const variationsWithDiscounts = variations.map(variation => {
+        //         const calculateDiscount = (originalPrice, discountPrice) => {
+        //             if (originalPrice && discountPrice) {
+        //                 let discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+        //                 discount = Math.max(discount, 0);
+        //                 discount = Math.round(discount);
+        //                 return discount;
+        //             }
+        //             return 0;
+        //         };
+
+        //         return {
+        //             ...variation,
+        //             oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
+        //             Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
+        //             threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
+        //             sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
+        //             twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
+        //         };
+        //     });
+        //     Service.variations = variationsWithDiscounts;
+        // }
+
+        if (variations && Array.isArray(variations)) {
+            const variationsWithDiscounts = [];
+            for (const variation of variations) {
+                if (variation.size) {
+                    const sizeExists = await Size.findOne({ _id: variation.size });
+                    if (!sizeExists) {
+                        return res.status(404).json({ message: `Size Not Found for variation`, status: 404, data: {} });
+                    }
+                }
+
                 const calculateDiscount = (originalPrice, discountPrice) => {
                     if (originalPrice && discountPrice) {
                         let discount = ((originalPrice - discountPrice) / originalPrice) * 100;
@@ -3637,17 +3513,18 @@ exports.updateService = async (req, res) => {
                     return 0;
                 };
 
-                return {
+                variationsWithDiscounts.push({
                     ...variation,
                     oneTimediscount: calculateDiscount(variation.oneTimeoriginalPrice, variation.oneTimediscountPrice),
                     Monthlydiscount: calculateDiscount(variation.MonthlyoriginalPrice, variation.MonthlydiscountPrice),
                     threeMonthdiscount: calculateDiscount(variation.threeMonthoriginalPrice, variation.threeMonthdiscountPrice),
                     sixMonthdiscount: calculateDiscount(variation.sixMonthoriginalPrice, variation.sixMonthdiscountPrice),
                     twelveMonthdiscount: calculateDiscount(variation.twelveMonthoriginalPrice, variation.twelveMonthdiscountPrice),
-                };
-            });
+                });
+            }
             Service.variations = variationsWithDiscounts;
         }
+
         if (images && Array.isArray(images)) {
             Service.images = images.map(image => ({ img: image.path }));
         }

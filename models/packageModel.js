@@ -13,6 +13,7 @@ const packageSchema = new Schema({
     timeInMin: { type: Number },
     totalTime: { type: String },
     variations: [{
+        size: { type: Schema.Types.ObjectId, ref: 'Size' },
         walksPerDay: { type: Number, },
         daysPerWeek: { type: Number, },
         oneTimeoriginalPrice: { type: Number },

@@ -17,6 +17,10 @@ const petSchema = new mongoose.Schema({
         type: schema.Types.ObjectId,
         ref: "Breed",
     },
+    size: {
+        type: schema.Types.ObjectId,
+        ref: 'Size'
+    },
     image: {
         type: String,
     },
