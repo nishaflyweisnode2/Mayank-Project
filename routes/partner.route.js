@@ -24,9 +24,8 @@ module.exports = (app) => {
         app.get('/api/v1/partner/getTodayOrders', [authJwt.verifyToken], auth.getTodayOrders);
         app.get('/api/v1/partner/getTomorrowOrders', [authJwt.verifyToken], auth.getTomorrowOrders);
         app.get('/api/v1/partner/orders/:id', [authJwt.verifyToken], auth.getOrderById);
-        app.post('/api/v1/partner-leaves', [authJwt.verifyToken], leaveController.createLeave);
-        app.get('/api/v1/partner/leaves', [authJwt.verifyToken], leaveController.getAllLeaves);
-        app.get('/api/v1/partner/leaves/:id', [authJwt.verifyToken], leaveController.getLeaveById);
+        app.get('/api/v1/partner/orders/update-status/:id', [authJwt.verifyToken], auth.updateOrderStatus);
+        app.post('/api/v1/partner/orders/add-service', [authJwt.verifyToken], auth.addServiceToOrder);
         app.post("/api/v1/partner/help/contact", [authJwt.verifyToken], HelpLines.createHelpLine);
         app.get("/api/v1/partner/help/contact", [authJwt.verifyToken], HelpLines.getAllHelpLines);
         app.post('/api/v1/partner-sp-agreements', authJwt.verifyToken, spAgreementUpload.fields([

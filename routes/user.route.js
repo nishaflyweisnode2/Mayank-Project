@@ -55,6 +55,14 @@ module.exports = (app) => {
         app.get('/api/v1/user/getOngoingOrders', [authJwt.verifyToken], auth.getOngoingOrders);
         app.get('/api/v1/user/getCompleteOrders', [authJwt.verifyToken], auth.getCompleteOrders);
         app.get("/api/v1/user/getOrder/:id", [authJwt.verifyToken], auth.getOrder);
+        app.post("/api/v1/user/Cart/package-order/checkout", [authJwt.verifyToken], auth.checkoutPackageOrder);
+        app.post("/api/v1/user/Cart/package-order/placeOrder/:orderId", [authJwt.verifyToken], auth.placePackageOrder);
+        app.delete('/api/v1/user/Cart/package-order/orders/:orderId', [authJwt.verifyToken], auth.deletePackageOrder);
+        app.post("/api/v1/user/Cart/package-order/cancelOrder/:orderId", [authJwt.verifyToken], auth.cancelPackageOrder);
+        app.get('/api/v1/user/package-order/getOngoingOrders', [authJwt.verifyToken], auth.getOngoingPackageOrder);
+        app.get('/api/v1/user/package-order/getCompleteOrders', [authJwt.verifyToken], auth.getCompletePackageOrder);
+        app.get("/api/v1/user/package-order/getOrder/:id", [authJwt.verifyToken], auth.getPackageOrder);
+        app.post("/api/v1/user/Cart/place-package-order/placeOrder", [authJwt.verifyToken], auth.placePackagewiseOrder);
         app.post("/api/v1/user/Feedback/AddFeedback", [authJwt.verifyToken], auth.AddFeedback);
         app.post("/api/v1/user/FavouriteBooking/addFavouriteBooking/:orderId", [authJwt.verifyToken], auth.addFavouriteBooking);
         app.get("/api/v1/user/FavouriteBooking/listFavouriteBooking", [authJwt.verifyToken], auth.listFavouriteBooking);
@@ -106,4 +114,6 @@ module.exports = (app) => {
         app.put('/api/v1/user/notifications/markAll/read', [authJwt.verifyToken], auth.markAllNotificationsAsRead);
         app.get('/api/v1/user/notifications/user/:userId', [authJwt.verifyToken], auth.getNotificationsForUser);
         app.get('/api/v1/user/notifications/user', [authJwt.verifyToken], auth.getAllNotificationsForUser);
+        app.get('/api/v1/user/order/withNewServices', [authJwt.verifyToken], auth.getOrdersWithNewServices);
+        app.put('/api/v1/user/order/updateNewServicePaymentStatus', [authJwt.verifyToken], auth.updateNewServicePaymentStatus);
 }

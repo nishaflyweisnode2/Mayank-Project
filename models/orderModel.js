@@ -140,6 +140,12 @@ const DocumentSchema = Schema({
                                 type: Number,
                                 default: 0,
                         },
+                        isNewServiceAdded: {
+                                type: Boolean,
+                        },
+                        isNewServicePaymentPaid: {
+                                type: Boolean,
+                        },
                 },
         ],
         addOnServices: [{
@@ -177,6 +183,7 @@ const DocumentSchema = Schema({
                                 },
                                 selectedCount: { type: Number, default: 0 },
                                 selected: { type: Boolean, default: false },
+                                usedCount: { type: Number, default: 0 },
                                 quantity: {
                                         type: Number,
                                         default: 1,
@@ -236,7 +243,7 @@ const DocumentSchema = Schema({
         },
         pets: {
                 type: Schema.Types.ObjectId,
-                ref: 'Pets',
+                ref: 'Pet',
         },
 }, { timestamps: true })
 module.exports = mongoose.model("order", DocumentSchema);

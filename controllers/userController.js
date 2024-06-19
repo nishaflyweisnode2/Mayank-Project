@@ -35,6 +35,7 @@ const Pet = require('../models/petModel');
 const Breed = require('../models/breedModel');
 const Attendance = require('../models/attendanceModel');
 const ServiceableAreaRadius = require('../models/serviceableRadiusModel');
+const PackageOrder = require('../models/packageOrderModel');
 
 
 
@@ -968,7 +969,7 @@ exports.addToCartSingleService = async (req, res) => {
                 if (!userData || !userData.city) {
                         return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
                 }
-               
+
                 let findPet;
                 if (req.body.pets) {
                         findPet = await Pet.findOne({ _id: req.body.pets }).populate('breed');
@@ -1592,10 +1593,12 @@ exports.addToCartPackageEssential = async (req, res) => {
 
                 let findPet;
                 if (req.body.pets) {
-                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                        findPet = await Pet.findOne({ _id: req.body.pets }).populate('breed');
                 } else {
                         findPet = await Pet.findOne({ user: userData._id }).populate('breed');
                 }
+                console.log(findPet);
+
                 const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage || !findPackage.packageType) {
@@ -1752,7 +1755,7 @@ exports.addToCartPackageStandard = async (req, res) => {
 
                 let findPet;
                 if (req.body.pets) {
-                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                        findPet = await Pet.findOne({ _id: req.body.pets }).populate('breed');
                 } else {
                         findPet = await Pet.findOne({ user: userData._id }).populate('breed');
                 }
@@ -1912,7 +1915,7 @@ exports.addToCartPackagePro = async (req, res) => {
 
                 let findPet;
                 if (req.body.pets) {
-                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                        findPet = await Pet.findOne({ _id: req.body.pets }).populate('breed');
                 } else {
                         findPet = await Pet.findOne({ user: userData._id }).populate('breed');
                 }
@@ -3241,6 +3244,319 @@ exports.getOrder = async (req, res) => {
         } catch (error) {
                 console.log(error);
                 return res.status(501).send({ status: 501, message: "server error.", data: {}, });
+        }
+};
+exports.checkoutPackageOrder = async (req, res) => {
+        try {
+                let userData = await User.findOne({ _id: req.user._id });
+
+                if (!userData) {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                } else {
+                        let findCart = await Cart.findOne({ userId: userData._id });
+
+                        if (!findCart) {
+                                return res.status(404).json({ status: 404, message: "Cart is empty.", data: {} });
+                        } else {
+                                let totalIsSlotPrice = 0;
+
+                                const timeSlotsFromCart = {
+                                        timeFrom: findCart.startTime,
+                                        timeTo: findCart.endTime,
+                                };
+
+                                const matchingTimeSlots = await Slot.find({
+                                        $and: [
+                                                { isSurgeAmount: true },
+                                                timeSlotsFromCart,
+                                        ],
+                                });
+
+                                for (const slot of matchingTimeSlots) {
+                                        totalIsSlotPrice += slot.surgeAmount;
+                                }
+
+                                findCart.paidAmount += totalIsSlotPrice;
+
+                                let orderId = await reffralCode();
+                                let obj = {
+                                        orderId: orderId,
+                                        userId: findCart.userId,
+                                        coupanId: findCart.coupanId,
+                                        freeService: findCart.freeService,
+                                        Charges: findCart.Charges,
+                                        tipProvided: findCart.tipProvided,
+                                        tip: findCart.tip,
+                                        freeServiceUsed: findCart.freeServiceUsed,
+                                        coupanUsed: findCart.coupanUsed,
+                                        walletUsed: findCart.walletUsed,
+                                        wallet: findCart.wallet,
+                                        coupan: findCart.coupan,
+                                        freeServiceCount: findCart.freeServiceCount,
+                                        suggestion: findCart.suggestion,
+                                        address: findCart.address,
+                                        city: findCart.city,
+                                        state: findCart.state,
+                                        pinCode: findCart.pinCode,
+                                        landMark: findCart.landMark,
+                                        street: findCart.street,
+                                        Date: findCart.Date,
+                                        startTime: findCart.startTime,
+                                        endTime: findCart.endTime,
+                                        services: findCart.services,
+                                        packages: findCart.packages,
+                                        totalAmount: findCart.totalAmount,
+                                        additionalFee: findCart.additionalFee,
+                                        paidAmount: findCart.paidAmount,
+                                        totalItem: findCart.totalItem,
+                                        pets: findCart.pets,
+                                        size: findCart.size,
+                                        orderStatus: "Unconfirmed",
+                                        serviceStatus: "Pending",
+                                        status: "Pending",
+                                        paymentStatus: "Pending",
+                                };
+
+                                let SaveOrder = await PackageOrder.create(obj);
+
+                                if (SaveOrder) {
+                                        return res.status(200).json({ status: 200, message: "Order created successfully.", data: SaveOrder });
+                                }
+                        }
+                }
+        } catch (error) {
+                console.log(error);
+                return res.status(501).send({ status: 501, message: "Server error.", data: {} });
+        }
+};
+exports.placePackageOrder = async (req, res) => {
+        try {
+                let findUserOrder = await PackageOrder.findOne({ orderId: req.params.orderId });
+                if (findUserOrder) {
+                        if (req.body.paymentStatus == "Paid") {
+                                let update = await PackageOrder.findByIdAndUpdate({ _id: findUserOrder._id }, { $set: { orderStatus: "Confirmed", status: "Confirmed", paymentStatus: "Paid" } }, { new: true });
+
+                                await Cart.deleteOne({ userId: findUserOrder.userId });
+
+                                return res.status(200).json({ message: "Payment success.", status: 200, data: update });
+                        }
+                        if (req.body.paymentStatus == "Failed") {
+                                return res.status(201).json({ message: "Payment failed.", status: 201, orderId: orderId });
+                        }
+                } else {
+                        return res.status(404).json({ message: "No data found", data: {} });
+                }
+        } catch (error) {
+                return res.status(501).send({ status: 501, message: "server error.", data: {}, });
+        }
+};
+exports.deletePackageOrder = async (req, res) => {
+        try {
+                const orderId = req.params.orderId;
+
+                const deletedOrder = await PackageOrder.findOneAndDelete({ orderId });
+
+                if (deletedOrder) {
+                        return res.status(200).json({ message: 'Order deleted successfully', status: 200, data: deletedOrder });
+                } else {
+                        return res.status(404).json({ message: 'Order not found', data: {} });
+                }
+        } catch (error) {
+                return res.status(500).json({ status: 500, message: 'Server error', data: {} });
+        }
+};
+exports.cancelPackageOrder = async (req, res) => {
+        try {
+                let findUserOrder = await PackageOrder.findOne({ orderId: req.params.orderId });
+                if (findUserOrder) {
+                        let update = await PackageOrder.findByIdAndUpdate({ _id: findUserOrder._id }, { $set: { orderStatus: "Cancel" } }, { new: true });
+                        return res.status(200).json({ message: "order cancel success.", status: 200, data: update })
+                } else {
+                        return res.status(404).json({ message: "No data found", data: {} });
+                }
+        } catch (error) {
+                return res.status(501).send({ status: 501, message: "server error.", data: {}, });
+        }
+};
+exports.getOngoingPackageOrder = async (req, res) => {
+        try {
+                const data = await PackageOrder.find({ userId: req.user._id, serviceStatus: "Pending" })
+                        .populate({
+                                path: "freeService.freeServiceId"
+                        })
+                        .populate({
+                                path: "services.serviceId"
+                        })
+                        .populate({
+                                path: "Charges.chargeId",
+                        })
+                // .populate({
+                //         path: "services.serviceId",
+                //         populate: [
+                //                 {
+                //                         path: "mainCategoryId categoryId subCategoryId",
+                //                 },
+                //         ],
+                // })
+
+                if (data.length > 0) {
+                        return res.status(200).json({ message: "All orders", data: data });
+                } else {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+        } catch (error) {
+                console.log(error);
+                return res.status(501).send({ status: 501, message: "server error.", data: {} });
+        }
+};
+exports.getCompletePackageOrder = async (req, res) => {
+        try {
+                const data = await PackageOrder.find({ userId: req.user._id, serviceStatus: "Complete" });
+                if (data.length > 0) {
+                        return res.status(200).json({ message: "All orders", data: data });
+                } else {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+        } catch (error) {
+                console.log(error);
+                return res.status(501).send({ status: 501, message: "server error.", data: {}, });
+        }
+};
+exports.getPackageOrder = async (req, res) => {
+        try {
+                const data = await PackageOrder.findById({ _id: req.params.id });
+                if (data) {
+                        return res.status(200).json({ message: "view order", data: data });
+                } else {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+        } catch (error) {
+                console.log(error);
+                return res.status(501).send({ status: 501, message: "server error.", data: {}, });
+        }
+};
+exports.placePackagewiseOrder = async (req, res) => {
+        try {
+                const { packageId, serviceId } = req.body;
+                const userId = req.user._id;
+
+                let packageOrder;
+                if (packageId && serviceId) {
+                        packageOrder = await PackageOrder.findOne({ 'packages.packageId': packageId });
+
+                        if (!packageOrder) {
+                                return res.status(404).json({ message: "Package not found", status: 404 });
+                        }
+
+                        if (packageOrder.paymentStatus === "Paid") {
+                                const package = packageOrder.packages.find(pkg => pkg.packageId.toString() === packageId.toString());
+                                const service = package.services.find(svc => svc.serviceId.toString() === serviceId.toString());
+
+                                if (!service) {
+                                        return res.status(404).json({ message: "Service not found", status: 404 });
+                                }
+
+                                if (service.usedCount >= service.selectedCount) {
+                                        return res.status(400).json({ message: "Service usage limit reached", status: 400 });
+                                }
+
+                                service.usedCount += 1;
+                                await packageOrder.save();
+
+                                const userData = await User.findOne({ _id: userId });
+
+                                if (!userData) {
+                                        return res.status(404).json({ status: 404, message: "No user data found", data: {} });
+                                }
+
+                                let totalSurgeAmount = 0;
+                                const timeSlotsFromCart = {
+                                        timeFrom: packageOrder.startTime,
+                                        timeTo: packageOrder.endTime,
+                                };
+
+                                const matchingTimeSlots = await Slot.find({
+                                        $and: [
+                                                { isSurgeAmount: true },
+                                                timeSlotsFromCart,
+                                        ],
+                                });
+
+                                matchingTimeSlots.forEach(slot => {
+                                        totalSurgeAmount += slot.surgeAmount;
+                                });
+
+                                packageOrder.paidAmount += totalSurgeAmount;
+
+                                const filteredPackage = {
+                                        packageId: package.packageId,
+                                        packageType: package.packageType,
+                                        services: [{
+                                                serviceId: service.serviceId,
+                                                selectedCount: service.selectedCount,
+                                                selected: service.selected,
+                                                usedCount: service.usedCount,
+                                                quantity: service.quantity
+                                        }]
+                                };
+
+                                const orderId = await reffralCode();
+                                const orderObj = {
+                                        orderId,
+                                        userId: packageOrder.userId,
+                                        coupanId: packageOrder.coupanId,
+                                        freeService: packageOrder.freeService,
+                                        Charges: packageOrder.Charges,
+                                        tipProvided: packageOrder.tipProvided,
+                                        tip: packageOrder.tip,
+                                        freeServiceUsed: packageOrder.freeServiceUsed,
+                                        coupanUsed: packageOrder.coupanUsed,
+                                        walletUsed: packageOrder.walletUsed,
+                                        wallet: packageOrder.wallet,
+                                        coupan: packageOrder.coupan,
+                                        freeServiceCount: packageOrder.freeServiceCount,
+                                        suggestion: packageOrder.suggestion,
+                                        address: packageOrder.address,
+                                        city: packageOrder.city,
+                                        state: packageOrder.state,
+                                        pinCode: packageOrder.pinCode,
+                                        landMark: packageOrder.landMark,
+                                        street: packageOrder.street,
+                                        Date: packageOrder.Date,
+                                        startTime: packageOrder.startTime,
+                                        endTime: packageOrder.endTime,
+                                        services: packageOrder.services,
+                                        packages: filteredPackage,
+                                        totalAmount: packageOrder.totalAmount,
+                                        additionalFee: packageOrder.additionalFee,
+                                        paidAmount: packageOrder.paidAmount,
+                                        totalItem: packageOrder.totalItem,
+                                        pets: packageOrder.pets,
+                                        size: packageOrder.size,
+                                        orderStatus: "Confirmed",
+                                        serviceStatus: "Pending",
+                                        status: "Confirmed",
+                                        paymentStatus: "Paid",
+                                };
+
+                                const savedOrder = await Order.create(orderObj);
+
+                                if (savedOrder) {
+                                        return res.status(200).json({ status: 200, message: "Order created successfully.", data: savedOrder });
+                                }
+                        } else {
+                                return res.status(400).json({ status: 400, message: "Order Payament is not paid.", });
+
+                        }
+
+                        return res.status(500).json({ status: 500, message: "Failed to create order.", data: {} });
+                }
+
+
+                return res.status(404).json({ message: "Invalid payment status or missing data.", data: {} });
+        } catch (error) {
+                console.error(error);
+                return res.status(501).send({ status: 501, message: "Server error.", data: {} });
         }
 };
 exports.AddFeedback = async (req, res) => {
@@ -4789,6 +5105,56 @@ exports.getAllNotificationsForUser = async (req, res) => {
                 return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
         }
 };
+exports.getOrdersWithNewServices = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const orders = await Order.find({
+                        userId: userId,
+                        'services.isNewServiceAdded': true,
+                        'services.isNewServicePaymentPaid': false
+                });
+
+                if (orders.length > 0) {
+                        return res.status(200).json({ status: 200, message: "Orders with new services", data: orders });
+                } else {
+                        return res.status(404).json({ status: 404, message: "No orders found with new services", data: {} });
+                }
+        } catch (error) {
+                console.error("Error fetching orders with new services:", error);
+                return res.status(500).json({ status: 500, message: "Server error", data: {} });
+        }
+};
+exports.updateNewServicePaymentStatus = async (req, res) => {
+        try {
+                const { orderId, serviceId, isNewServicePaymentPaid } = req.body;
+
+                if (!orderId || !serviceId || typeof isNewServicePaymentPaid === 'undefined') {
+                        return res.status(400).json({ status: 400, message: "orderId, serviceId, and isNewServicePaymentPaid are required" });
+                }
+
+                const order = await Order.findById(orderId);
+
+                if (!order) {
+                        return res.status(404).json({ status: 404, message: "Order not found" });
+                }
+
+                const service = order.services.find(svc => svc.serviceId.toString() === serviceId);
+
+                if (!service) {
+                        return res.status(404).json({ status: 404, message: "Service not found in the order" });
+                }
+
+                service.isNewServicePaymentPaid = isNewServicePaymentPaid;
+
+                await order.save();
+
+                return res.status(200).json({ status: 200, message: "Service payment status updated successfully", data: order });
+        } catch (error) {
+                console.error("Error updating service payment status:", error);
+                return res.status(500).json({ status: 500, message: "Server error", data: {} });
+        }
+};
 
 function haversineDistance(coords1, coords2) {
         const toRad = (x) => x * Math.PI / 180;
@@ -4807,6 +5173,7 @@ function haversineDistance(coords1, coords2) {
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
 }
+
 async function assignOrderToPartner() {
         try {
                 const orders = await Order.find({ partnerId: { $exists: false } }).populate('packages.packageId')
@@ -4904,8 +5271,6 @@ async function assignOrderToPartner() {
                                 userId: { $in: partnerIds }
                         });
 
-                        console.log("attendances", attendances);
-
                         if (!attendances.length) {
                                 console.log(`Attendance not marked for main categories in order ${order._id}`);
                                 continue;
@@ -4922,6 +5287,7 @@ async function assignOrderToPartner() {
                                         const relevantAttendances = attendances.filter(att => att.mainCategoryId.equals(categoryObjectId));
 
                                         const isSlotAvailable = relevantAttendances.some(attendance => {
+
                                                 if (attendance.date && order.Date && attendance.date.toISOString().split('T')[0] === order.Date.toISOString().split('T')[0]) {
 
                                                         if (attendance.timeSlots) {
@@ -4956,25 +5322,24 @@ async function assignOrderToPartner() {
                                 const maxDistanceObj = distanceCriteria.find(criteria => criteria.transportMode === partner.transportation);
                                 console.log("maxDistanceObj", maxDistanceObj);
                                 if (maxDistanceObj && distance <= maxDistanceObj.radiusInKms) {
-                                        const partnerAttendance = attendances.find(att => att.userId.equals(partner._id));
+                                        const partnerAttendance = attendances.find(att =>
+                                                att.userId.equals(partner._id) &&
+                                                att.date.toISOString().split('T')[0] === order.Date.toISOString().split('T')[0]
+                                        );
+
                                         if (partnerAttendance) {
-                                                const mainCategoryIdStr = partnerAttendance.mainCategoryId.toString();
                                                 console.log("partnerAttendance", partnerAttendance);
-                                                console.log("categorizedSlots", categorizedSlots);
-                                                console.log("partnerAttendance.mainCategoryId", partnerAttendance.mainCategoryId);
-                                                console.log("mainCategoryIdStr", mainCategoryIdStr);
 
-                                                // if (categorizedSlots[mainCategoryIdStr] && categorizedSlots[mainCategoryIdStr].length > 0) {
+                                                const mainCategoryIdStr = partnerAttendance.mainCategoryId.toString();
 
-                                                        order.partnerId = partner._id;
-                                                        order.partnerLocation.coordinates = partner.currentLocation.coordinates;
-                                                        await order.save();
-                                                        console.log(`Order ${order._id} assigned to partner ${partner._id} successfully.`);
-                                                        assigned = true;
-                                                        break;
-                                                }
+                                                order.partnerId = partner._id;
+                                                order.partnerLocation.coordinates = partner.currentLocation.coordinates;
+                                                await order.save();
+                                                console.log(`Order ${order._id} assigned to partner ${partner._id} successfully.`);
+                                                assigned = true;
+                                                break;
                                         }
-                                // }
+                                }
                         }
                         if (!assigned) {
                                 console.log(`No suitable partner found for order ${order._id}`);

@@ -28,7 +28,8 @@ const ContactDetail = require("../models/ContactDetail");
 const MainCategory = require("../models/category/mainCategory");
 const Team = require('../models/teamModel');
 const ApprovalRequest = require('../models/teamApprovalModel');
-
+const Pet = require('../models/petModel');
+const Breed = require('../models/breedModel');
 
 
 
@@ -601,6 +602,7 @@ exports.markAttendance = async (req, res) => {
                 if (allDay) {
                         attendanceRecord.timeSlots.forEach(slot => {
                                 slot.available = true;
+                                attendanceRecord.allDay = true;
                         });
                         attendanceRecord.isMarkAttendance = isMarkAttendance || false
                 } else {
@@ -614,6 +616,7 @@ exports.markAttendance = async (req, res) => {
                                 );
                                 if (foundSlot) {
                                         foundSlot.available = providedSlot.available;
+                                        attendanceRecord.allDay = false;
                                 }
                         }
                         attendanceRecord.isMarkAttendance = isMarkAttendance || false
@@ -1368,29 +1371,12 @@ exports.getAllNotificationsForUser = async (req, res) => {
                 return res.status(500).json({ status: 500, message: 'Error retrieving notifications', error: error.message });
         }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 exports.getTodayOrders = async (req, res) => {
         try {
+                const today = new Date();
+                const fromDate = new Date(today.setHours(0, 0, 0, 0));
+                const toDate = new Date(today.setHours(23, 59, 59, 999));
+
                 const data = await orderModel.find({ partnerId: req.user._id, Date: { $gte: fromDate }, Date: { $lte: toDate } });
                 if (data.length > 0) {
                         return res.status(200).json({ message: "All orders", data: data });
@@ -1404,20 +1390,84 @@ exports.getTodayOrders = async (req, res) => {
 };
 exports.getTomorrowOrders = async (req, res) => {
         try {
-                const data = await orderModel.find({ partnerId: req.user._id });
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const fromDate = new Date(tomorrow.setHours(0, 0, 0, 0));
+                const toDate = new Date(tomorrow.setHours(23, 59, 59, 999));
+
+                const data = await orderModel.find({
+                        partnerId: req.user._id,
+                        Date: { $gte: fromDate, $lte: toDate }
+                });
+
                 if (data.length > 0) {
-                        return res.status(200).json({ message: "All orders", data: data });
+                        return res.status(200).json({ message: "Tomorrow's orders", data: data });
                 } else {
-                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                        return res.status(404).json({ status: 404, message: "No orders found for tomorrow", data: {} });
                 }
         } catch (error) {
-                console.log(error);
-                return res.status(501).send({ status: 501, message: "server error.", data: {}, });
+                console.error("Error fetching tomorrow's orders:", error);
+                return res.status(501).json({ status: 501, message: "Server error", data: {} });
         }
 };
 exports.getAllOrders = async (req, res) => {
         try {
-                const data = await orderModel.find({ partnerId: req.user._id });
+                const data = await orderModel.find({ partnerId: req.user._id }).populate('userId pets size').populate('packages.packageId')
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.services',
+                                populate: {
+                                        path: 'serviceId',
+                                        model: 'Service'
+                                }
+                        });
                 if (data.length > 0) {
                         return res.status(200).json({ message: "All orders", data: data });
                 } else {
@@ -1443,7 +1493,129 @@ exports.getOrderById = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error.", data: {} });
         }
 };
+exports.updateOrderStatus = async (req, res) => {
+        const { status } = req.body;
+        const orderId = req.params.id;
 
+        try {
+                const updatedOrder = await orderModel.findByIdAndUpdate(
+                        orderId,
+                        { serviceStatus: status },
+                        { new: true }
+                );
+
+                if (!updatedOrder) {
+                        return res.status(404).json({ status: 404, message: "Order not found", data: {} });
+                }
+
+                return res.status(200).json({ status: 200, message: "Order status updated successfully", data: updatedOrder });
+        } catch (error) {
+                console.error("Error updating order status:", error);
+                return res.status(500).json({ status: 500, message: "Server error", data: {} });
+        }
+};
+exports.addServiceToOrder = async (req, res) => {
+        try {
+                const { orderId, serviceId, quantity } = req.body;
+
+                if (!orderId || !serviceId || !quantity || isNaN(quantity) || quantity <= 0) {
+                        return res.status(400).json({ status: 400, message: "orderId, serviceId, and valid quantity are required" });
+                }
+
+                const order = await orderModel.findById(orderId);
+                if (!order) {
+                        return res.status(404).json({ status: 404, message: "Order not found" });
+                }
+
+                const serviceData = await service.findById(serviceId);
+                if (!serviceData) {
+                        return res.status(404).json({ status: 404, message: "Service not found" });
+                }
+
+                let findPet;
+                if (req.body.pets) {
+                        findPet = await Pet.findOne({ _id: order.pets }).populate('breed');
+                } else {
+                        findPet = await Pet.findOne({ user: order.userId }).populate('breed');
+                }
+
+                if (!findPet) {
+                        return res.status(404).json({ status: 404, message: "Pet not found" });
+                }
+
+                let originalPrice = 0;
+                let discountActive = false;
+                let discountPrice = 0;
+
+                if (serviceData.variations && serviceData.variations.length > 0) {
+                        const variation = serviceData.variations.find(v => v.size.toString() === findPet.size.toString());
+
+                        if (!variation) {
+                                return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
+                        }
+
+                        const month = req.body.month || "oneTime";
+                        switch (month) {
+                                case 'oneTime':
+                                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                                        discountActive = variation.oneTimediscountActive || false;
+                                        discountPrice = variation.oneTimediscountPrice || 0;
+                                        break;
+                                case 'monthly':
+                                        originalPrice = variation.MonthlyoriginalPrice || 0;
+                                        discountActive = variation.MonthlydiscountActive || false;
+                                        discountPrice = variation.MonthlydiscountPrice || 0;
+                                        break;
+                                case 'threeMonth':
+                                        originalPrice = variation.threeMonthoriginalPrice || 0;
+                                        discountActive = variation.threeMonthdiscountActive || false;
+                                        discountPrice = variation.threeMonthdiscountPrice || 0;
+                                        break;
+                                case 'sixMonth':
+                                        originalPrice = variation.sixMonthoriginalPrice || 0;
+                                        discountActive = variation.sixMonthdiscountActive || false;
+                                        discountPrice = variation.sixMonthdiscountPrice || 0;
+                                        break;
+                                case 'twelveMonth':
+                                        originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                        discountActive = variation.twelveMonthdiscountActive || false;
+                                        discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                        break;
+                                default:
+                                        return res.status(400).json({ status: 400, message: "Invalid month value" });
+                        }
+
+                        if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                                discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                                discount = Math.max(discount, 0);
+                                discount = Math.round(discount);
+                        }
+                }
+
+                let price = discountActive ? discountPrice : originalPrice || 0;
+                let totalAmount = Number((price * quantity).toFixed(2));
+
+                const newService = {
+                        serviceId: serviceData._id,
+                        serviceType: serviceData.serviceType,
+                        price: price,
+                        quantity: quantity,
+                        total: totalAmount,
+                        type: "Service",
+                        isNewServiceAdded: true,
+                        isNewServicePaymentPaid: false
+                };
+
+                order.services.push(newService);
+
+                const updatedOrder = await order.save();
+
+                return res.status(200).json({ status: 200, message: "Service added to order successfully", data: updatedOrder });
+        } catch (error) {
+                console.error("Error adding service to order:", error);
+                return res.status(500).json({ status: 500, message: "Server error", data: {} });
+        }
+};
 exports.createSPAgreement = async (req, res) => {
         try {
                 const {
