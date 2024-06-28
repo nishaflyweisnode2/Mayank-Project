@@ -1,6 +1,12 @@
 const mongoose = require("mongoose");
 const schema = mongoose.Schema;
 const addressSchema = new mongoose.Schema({
+  address1: {
+    type: String,
+  },
+  address2: {
+    type: String,
+  },
   houseFlat: {
     type: String,
   },
