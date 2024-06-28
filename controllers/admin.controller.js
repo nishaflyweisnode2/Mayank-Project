@@ -1914,13 +1914,12 @@ exports.getServiceWithoutSubCategory = async (req, res) => {
             categoryId: findCategory._id,
             // subCategoryId: findSubCategory._id,
             status: true,
-        }).populate({
-            path: 'location.city',
-            model: 'City',
-        }).populate({
-            path: 'services.service',
-            model: 'Service',
-        }).exec();
+        }).populate('subCategoryId categoryId mainCategoryId')
+            .populate({
+                path: 'variations.size',
+                model: 'Size'
+            });
+
         console.log("findServices", findService);
         let servicesWithCartInfo = [];
 
