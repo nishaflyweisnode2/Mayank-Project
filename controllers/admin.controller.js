@@ -1789,24 +1789,11 @@ exports.getService = async (req, res) => {
             categoryId: findCategory._id,
             subCategoryId: findSubCategory._id,
             status: true,
-        }).populate({
-            path: 'location.city',
-            model: 'City',
-        })/*.populate({
-            path: 'location.sector',
-            model: 'Area',
-        })*/.populate({
-            path: 'serviceTypes',
-            model: 'ServiceTypeRef',
-            populate: [{
-                //     path: 'service',
-                //     model: 'Service'
-                // }, 
-                // {
-                path: 'serviceType',
-                model: 'ServiceType'
-            }]
-        }).exec();
+        }).populate('subCategoryId categoryId mainCategoryId')
+            .populate({
+                path: 'variations.size',
+                model: 'Size'
+            });
         console.log("findServices", findService);
         let servicesWithCartInfo = [];
 
@@ -2002,7 +1989,11 @@ exports.getServiceWithoutSubCategory = async (req, res) => {
 };
 exports.getAllService = async (req, res) => {
     try {
-        const findService = await service.find().populate('mainCategoryId', 'name').populate('categoryId', 'name').populate('subCategoryId', 'name').populate('size', 'size')
+        const findService = await service.find().populate('subCategoryId categoryId mainCategoryId')
+            .populate({
+                path: 'variations.size',
+                model: 'Size'
+            });
 
         if (findService.length > 0) {
             return res.status(200).json({
