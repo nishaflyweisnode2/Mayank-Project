@@ -2013,14 +2013,7 @@ exports.getServiceById = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const foundService = await service.findById(id).populate('mainCategoryId', 'name').populate('categoryId', 'name').populate('subCategoryId', 'name')
-            .populate({
-                path: 'location.city',
-                model: 'City',
-            }).populate({
-                path: 'location.sector',
-                model: 'Area',
-            });
+        const foundService = await service.findById(id).populate('mainCategoryId').populate('categoryId').populate('subCategoryId')
 
         if (!foundService) {
             return res.status(404).json({ message: "Service not found.", status: 404, data: {} });
