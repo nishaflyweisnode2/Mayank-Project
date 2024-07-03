@@ -3819,26 +3819,30 @@ exports.getTestimonialById = async (req, res) => {
                 res.status(500).json({ error: "Failed to retrieve testimonial" });
         }
 };
-exports.createRating = async (req, res) => {
+exports.createRating1 = async (req, res) => {
         try {
                 const userId = req.user._id;
 
                 const {
                         orderId,
+                        serviceId,
+                        mainCategory,
                         categoryId,
                         ratingValue,
                         comment,
                         date,
                         type,
+
                 } = req.body;
 
-                if (!orderId || !categoryId || !ratingValue || !date) {
+                if (!mainCategory || !orderId || !categoryId || !ratingValue || !date || !serviceId) {
                         return res.status(400).json({ error: 'Incomplete data for rating creation' });
                 }
 
                 const user = await User.findOne({ _id: userId });
                 const order = await Order.findOne({ _id: orderId });
                 console.log("order", order);
+                const mainCategoryData = await MainCategory.findOne({ _id: mainCategory });
                 const category = await Category.findOne({ _id: categoryId });
 
                 if (!user || !order || !category) {
@@ -3858,7 +3862,7 @@ exports.createRating = async (req, res) => {
                                 partnerId: order.partnerId,
                                 orderId: order._id,
                                 categoryId: category._id,
-                                type: "order",
+                                type: type,
                                 rating: [{
                                         userId: user._id,
                                         rating: ratingValue,
@@ -3909,9 +3913,233 @@ exports.createRating = async (req, res) => {
                 res.status(500).json({ error: 'Failed to create rating' });
         }
 };
+exports.createRating = async (req, res) => {
+        try {
+                const userId = req.user._id;
+
+                const {
+                        orderId,
+                        serviceId,
+                        mainCategory,
+                        categoryId,
+                        ratingValue,
+                        comment,
+                        date,
+                        type,
+                } = req.body;
+
+                if (!mainCategory || !categoryId || !ratingValue || !date) {
+                        return res.status(400).json({ error: 'Incomplete data for rating creation' });
+                }
+
+                if (!orderId && !serviceId) {
+                        return res.status(400).json({ error: 'Either orderId or serviceId must be provided' });
+                }
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ error: 'User not found' });
+                }
+
+                const mainCategoryData = await MainCategory.findOne({ _id: mainCategory });
+                const category = await Category.findOne({ _id: categoryId });
+                if (!mainCategoryData || !category) {
+                        return res.status(404).json({ error: 'Main category or category not found' });
+                }
+
+                let order = null;
+                let serviceData = null;
+                let partnerId = null;
+
+                if (orderId) {
+                        order = await Order.findOne({ _id: orderId });
+                        if (!order) {
+                                return res.status(404).json({ error: 'Order not found' });
+                        }
+                        partnerId = order.partnerId;
+                }
+
+                if (serviceId) {
+                        serviceData = await service.findOne({ _id: serviceId });
+                        if (!serviceData) {
+                                return res.status(404).json({ error: 'Service not found' });
+                        }
+                        partnerId = serviceData.partnerId;
+                }
+
+                //     if (!partnerId) {
+                //         return res.status(400).json({ error: 'Partner ID not found' });
+                //     }
+
+                if (orderId) {
+                        let orderRating = await Rating.findOne({
+                                userId: user._id,
+                                partnerId: partnerId,
+                                orderId: order._id,
+                                mainCategory: mainCategoryData._id,
+                                categoryId: category._id,
+                                type: type,
+                        });
+
+                        if (!orderRating) {
+                                orderRating = new Rating({
+                                        userId: user._id,
+                                        partnerId: partnerId,
+                                        orderId: order._id,
+                                        mainCategory: mainCategoryData._id,
+                                        categoryId: category._id,
+                                        type: type,
+                                        rating: [{
+                                                userId: user._id,
+                                                rating: ratingValue,
+                                                comment,
+                                                date,
+                                        }],
+                                });
+                        } else {
+                                orderRating.rating.push({
+                                        userId: user._id,
+                                        rating: ratingValue,
+                                        comment,
+                                        date,
+                                });
+                        }
+
+                        switch (ratingValue) {
+                                case 1:
+                                        orderRating.rating1++;
+                                        break;
+                                case 2:
+                                        orderRating.rating2++;
+                                        break;
+                                case 3:
+                                        orderRating.rating3++;
+                                        break;
+                                case 4:
+                                        orderRating.rating4++;
+                                        break;
+                                case 5:
+                                        orderRating.rating5++;
+                                        break;
+                                default:
+                                        break;
+                        }
+
+                        orderRating.totalRating = orderRating.rating1 + orderRating.rating2 + orderRating.rating3 + orderRating.rating4 + orderRating.rating5;
+
+                        const totalOrderRatings = orderRating.totalRating;
+                        const sumOrderRatings = orderRating.rating1 + orderRating.rating2 * 2 + orderRating.rating3 * 3 + orderRating.rating4 * 4 + orderRating.rating5 * 5;
+                        orderRating.averageRating = totalOrderRatings === 0 ? 0 : sumOrderRatings / totalOrderRatings;
+
+                        await orderRating.save();
+                }
+
+                if (serviceId) {
+                        let serviceRating = await Rating.findOne({
+                                userId: user._id,
+                                partnerId: partnerId,
+                                serviceId: serviceData._id,
+                                mainCategory: mainCategoryData._id,
+                                categoryId: category._id,
+                                type: type,
+                        });
+
+                        if (!serviceRating) {
+                                serviceRating = new Rating({
+                                        userId: user._id,
+                                        partnerId: partnerId,
+                                        serviceId: serviceData._id,
+                                        mainCategory: mainCategoryData._id,
+                                        categoryId: category._id,
+                                        type: type,
+                                        rating: [{
+                                                userId: user._id,
+                                                rating: ratingValue,
+                                                comment,
+                                                date,
+                                        }],
+                                });
+                        } else {
+                                serviceRating.rating.push({
+                                        userId: user._id,
+                                        rating: ratingValue,
+                                        comment,
+                                        date,
+                                });
+                        }
+
+                        switch (ratingValue) {
+                                case 1:
+                                        serviceRating.rating1++;
+                                        break;
+                                case 2:
+                                        serviceRating.rating2++;
+                                        break;
+                                case 3:
+                                        serviceRating.rating3++;
+                                        break;
+                                case 4:
+                                        serviceRating.rating4++;
+                                        break;
+                                case 5:
+                                        serviceRating.rating5++;
+                                        break;
+                                default:
+                                        break;
+                        }
+
+                        serviceRating.totalRating = serviceRating.rating1 + serviceRating.rating2 + serviceRating.rating3 + serviceRating.rating4 + serviceRating.rating5;
+
+                        const totalServiceRatings = serviceRating.totalRating;
+                        const sumServiceRatings = serviceRating.rating1 + serviceRating.rating2 * 2 + serviceRating.rating3 * 3 + serviceRating.rating4 * 4 + serviceRating.rating5 * 5;
+                        serviceRating.averageRating = totalServiceRatings === 0 ? 0 : sumServiceRatings / totalServiceRatings;
+
+                        await serviceRating.save();
+                }
+
+                res.status(201).json({ status: 201, message: 'Rating created successfully', });
+        } catch (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Failed to create rating' });
+        }
+};
 exports.getAllRatingsForOrder = async (req, res) => {
         try {
                 const allRatings = await Rating.find({ type: "order" });
+                res.status(200).json({ message: "All Ratings Found", status: 200, data: allRatings });
+        } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: "Server error", status: 500, data: {} });
+        }
+};
+exports.getAllRatingsForService = async (req, res) => {
+        try {
+                const allRatings = await Rating.find({ type: "service" });
+                res.status(200).json({ message: "All Ratings Found", status: 200, data: allRatings });
+        } catch (error) {
+                console.error(error);
+                res.status(500).json({ message: "Server error", status: 500, data: {} });
+        }
+};
+exports.getAllRatingsForServiceById = async (req, res) => {
+        try {
+                const { mainCategory, categoryId, serviceId } = req.query;
+
+                let query = { type: "service" };
+
+                if (mainCategory) {
+                        query.mainCategory = mainCategory;
+                }
+
+                if (categoryId) {
+                        query.categoryId = categoryId;
+                }
+
+                if (serviceId) {
+                        query.serviceId = serviceId;
+                }
+
+                const allRatings = await Rating.find(query).populate("userId serviceId orderId mainCategory categoryId");;
                 res.status(200).json({ message: "All Ratings Found", status: 200, data: allRatings });
         } catch (error) {
                 console.error(error);
@@ -3965,12 +4193,63 @@ exports.getRatingCountsForOrder = async (req, res) => {
                 res.status(500).json({ status: 500, message: "Server error", data: {} });
         }
 };
+exports.getRatingCountsForService = async (req, res) => {
+        try {
+                const ratingCounts = await Rating.aggregate([
+                        {
+                                $match: { type: "service" }
+                        },
+                        {
+                                $group: {
+                                        _id: null,
+                                        rating1Count: { $sum: "$rating1" },
+                                        rating2Count: { $sum: "$rating2" },
+                                        rating3Count: { $sum: "$rating3" },
+                                        rating4Count: { $sum: "$rating4" },
+                                        rating5Count: { $sum: "$rating5" }
+                                }
+                        },
+                        {
+                                $project: {
+                                        _id: 0
+                                }
+                        }
+                ]);
+
+                if (ratingCounts.length === 0) {
+                        return res.status(404).json({ status: 404, message: "No ratings found for order" });
+                }
+                const orderRatings = ratingCounts[0];
+
+                res.status(200).json({ status: 200, message: "Order rating counts", data: orderRatings });
+        } catch (error) {
+                console.error(error);
+                res.status(500).json({ status: 500, message: "Server error", data: {} });
+        }
+};
 exports.getUserRatingsWithOrders = async (req, res) => {
         try {
                 const userId = req.user._id;
                 console.log("userId", userId);
 
-                const userWithRatings = await Rating.find({ userId: userId }).populate("userId orderId mainCategory categoryId");
+                const userWithRatings = await Rating.find({ userId: userId, type: "order" }).populate("userId serviceId orderId mainCategory categoryId");
+
+                if (!userWithRatings || userWithRatings.length === 0) {
+                        return res.status(404).json({ error: 'User not found or has no ratings' });
+                }
+
+                res.status(200).json({ userWithRatings });
+        } catch (error) {
+                console.error(error);
+                res.status(500).json({ error: 'Failed to fetch user ratings' });
+        }
+};
+exports.getUserRatingsWithServices = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                console.log("userId", userId);
+
+                const userWithRatings = await Rating.find({ userId: userId, type: "service" }).populate("userId serviceId orderId mainCategory categoryId");
 
                 if (!userWithRatings || userWithRatings.length === 0) {
                         return res.status(404).json({ error: 'User not found or has no ratings' });

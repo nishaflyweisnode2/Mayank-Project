@@ -76,10 +76,14 @@ module.exports = (app) => {
         app.get("/api/v1/user/testimonial/:id", [authJwt.verifyToken], auth.getTestimonialById);
         app.post('/api/v1/user/rating/ratings', [authJwt.verifyToken], auth.createRating);
         app.get("/api/v1/user/allRatingsForOrder", [authJwt.verifyToken], auth.getAllRatingsForOrder);
+        app.get("/api/v1/user/allRatingsForService", [authJwt.verifyToken], auth.getAllRatingsForService);
         app.get("/api/v1/user/rating/:ratingId", [authJwt.verifyToken], auth.getRatingById);
         app.get('/api/v1/user/rating-orderRatings', [authJwt.verifyToken], auth.getRatingCountsForOrder);
-        app.get('/api/v1/user/user-ratings', [authJwt.verifyToken], auth.getUserRatingsWithOrders);
+        app.get('/api/v1/user/rating-serviceRatings', [authJwt.verifyToken], auth.getRatingCountsForService);
+        app.get('/api/v1/user/user-ratings/order', [authJwt.verifyToken], auth.getUserRatingsWithOrders);
+        app.get('/api/v1/user/user-ratings/service', [authJwt.verifyToken], auth.getUserRatingsWithServices);
         app.post('/api/v1/user/rating/maincategoryRating', [authJwt.verifyToken], auth.giveMaincategoryRating);
+        app.get("/api/v1/user/allRatingsForService/byquery", [authJwt.verifyToken], auth.getAllRatingsForServiceById);
         app.get("/api/v1/user/allRatingsForMainCategory/:mainCategory", [authJwt.verifyToken], auth.getAllRatingsForMainCategory);
         app.get('/api/v1/user/rating-mainCategoryRatings/:categoryId', [authJwt.verifyToken], auth.getRatingCountsForMainCategory);
         app.get('/api/v1/user/rating-mainAllCategoryRatings', [authJwt.verifyToken], auth.getRatingCountsForAllMainCategory);

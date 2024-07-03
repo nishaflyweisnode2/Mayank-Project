@@ -22,6 +22,10 @@ const ratingSchema = new mongoose.Schema(
             type: schema.Types.ObjectId,
             ref: "mainCategory"
         },
+        serviceId: {
+            type: schema.Types.ObjectId,
+            ref: "Service"
+        },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'user',
@@ -82,8 +86,10 @@ const ratingSchema = new mongoose.Schema(
             type: Number,
             default: 0
         },
-        type: String,
-        enum: ["order", "mainCategory"],
+        type: {
+            type: String,
+            enum: ["order", "mainCategory", "service"],
+        },
     },
     { timestamps: true }
 );

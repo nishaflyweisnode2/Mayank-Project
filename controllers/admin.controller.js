@@ -1987,6 +1987,119 @@ exports.getServiceWithoutSubCategory = async (req, res) => {
         return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
     }
 };
+exports.getServiceWithMainCategory = async (req, res) => {
+    try {
+        const findMainCategory = await mainCategory.findById({ _id: req.params.mainCategoryId });
+        if (!findMainCategory) {
+            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
+        }
+
+        const findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id });
+        if (!findCategory) {
+            return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
+        }
+
+        // const findSubCategory = await subCategory.findOne({
+        //     _id: req.params.subCategoryId, mainCategoryId: findMainCategory._id, categoryId: findCategory._id,
+        // });
+
+        // if (!findSubCategory) {
+        //     return res.status(404).json({ message: "Subcategory Not Found", status: 404, data: {} });
+        // }
+
+        const userCart = await Cart.findOne({ userId: req.user.id });
+
+        const findService = await service.find({
+            mainCategoryId: findMainCategory._id,
+            categoryId: findCategory._id,
+            // subCategoryId: findSubCategory._id,
+            status: true,
+        }).populate('subCategoryId categoryId mainCategoryId')
+            .populate({
+                path: 'variations.size',
+                model: 'Size'
+            });
+
+        console.log("findServices", findService);
+        let servicesWithCartInfo = [];
+
+        let totalDiscountActive = 0;
+        let totalDiscount = 0;
+        let totalDiscountPrice = 0;
+        let totalQuantityInCart = 0;
+        let totalIsInCart = 0;
+        let totalOriginalPrice = 0;
+
+        if (findService.length > 0 && userCart) {
+            servicesWithCartInfo = findService.map((product) => {
+                const cartItem = userCart.services.find((item) => item.serviceId.equals(product._id));
+
+                let totalDiscountPriceItem = 0;
+                let isInCartItem = 0;
+
+                if (cartItem) {
+                    isInCartItem = 1;
+                    if (product.type === "Package") {
+                        totalDiscountPriceItem = product.discountActive && product.discountPrice ? product.discountPrice * cartItem.quantity : 0;
+                    } else {
+                        totalDiscountPriceItem = product.discountActive && product.discount ? product.discount * cartItem.quantity : 0;
+                    }
+
+                    totalOriginalPrice += (product.originalPrice || 0) * (cartItem.quantity || 0);
+                }
+
+                const countDiscountItem = product.discountActive ? 1 : 0;
+
+                totalDiscountActive += countDiscountItem;
+                totalDiscount += (product.discountActive && product.discount) ? (product.discount * (cartItem?.quantity || 0)) : 0;
+
+                if (product.discountActive && product.discountPrice) {
+                    totalDiscountPrice += product.discountPrice * (cartItem?.quantity || 0);
+                }
+
+                totalQuantityInCart += cartItem ? cartItem.quantity : 0;
+                totalIsInCart += isInCartItem;
+
+                return {
+                    ...product.toObject(),
+                    isInCart: cartItem ? true : false,
+                    quantityInCart: cartItem ? cartItem.quantity : 0,
+                    totalDiscountPrice: totalDiscountPriceItem,
+                    countDiscount: countDiscountItem,
+                };
+            });
+        } else if (findService.length > 0) {
+            servicesWithCartInfo = findService.map((product) => ({
+                ...product.toObject(),
+                isInCart: false,
+                quantityInCart: 0,
+                totalDiscountPrice: product.discountActive && product.type !== "Package" ? (product.discount || 0) : 0,
+                countDiscount: product.discountActive ? 1 : 0,
+                totalOriginalPrice: product.originalPrice || 0,
+            }));
+        }
+
+        if (findService.length > 0) {
+            const response = {
+                message: "Services Found",
+                status: 200,
+                data: servicesWithCartInfo,
+                totalDiscountActive,
+                totalDiscount,
+                totalDiscountPrice,
+                totalQuantityInCart,
+                totalIsInCart,
+                totalOriginalPrice,
+            };
+            return res.status(200).json(response);
+        } else {
+            return res.status(404).json({ message: "Services not found.", status: 404, data: {} });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
 exports.getAllService = async (req, res) => {
     try {
         const findService = await service.find().populate('subCategoryId categoryId mainCategoryId')
