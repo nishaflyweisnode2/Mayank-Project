@@ -966,8 +966,8 @@ exports.addToCartSingleService1 = async (req, res) => {
 exports.addToCartSingleService = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
-                if (!userData || !userData.city) {
-                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                if (!userData) {
+                        return res.status(400).json({ status: 400, message: "User not found." });
                 }
 
                 let findPet;
@@ -1282,8 +1282,8 @@ exports.addToCartAddOnSingleService1 = async (req, res) => {
 exports.addToCartAddOnSingleService = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
-                if (!userData || !userData.city) {
-                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                if (!userData) {
+                        return res.status(400).json({ status: 400, message: "User not found." });
                 }
                 let findPet;
                 if (req.body.pets) {
