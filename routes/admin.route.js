@@ -211,6 +211,10 @@ module.exports = (app) => {
         app.get('/api/v1/admin/notifications/user', [authJwt.verifyToken], auth.getAllNotificationsForUser);
         app.delete('/api/v1/admin/notifications/delete/all', [authJwt.verifyToken], auth.deleteAllNotifications);
         app.delete('/api/v1/admin/notifications/delete/:id', [authJwt.verifyToken], auth.deleteNotificationById);
-
+        app.post('/api/v1/admin/cancelation-policy', [authJwt.verifyToken], auth.createCancelationPolicy);
+        app.get('/api/v1/admin/cancelation-policy', /*[authJwt.verifyToken],*/ auth.getAllCancelationPolicy);
+        app.get('/api/v1/admin/cancelation-policy/:id', [authJwt.verifyToken], auth.getCancelationPolicyById);
+        app.put('/api/v1/admin/cancelation-policy/:id', [authJwt.verifyToken], auth.updateCancelationPolicyById);
+        app.delete('/api/v1/admin/cancelation-policy/:id', [authJwt.verifyToken], auth.deleteCancelationPolicyById);
 
 }

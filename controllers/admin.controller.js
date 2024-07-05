@@ -46,6 +46,7 @@ const ServiceableAreaRadius = require('../models/serviceableRadiusModel');
 const ExperienceScore = require('../models/experienceScoreModel');
 const Size = require('../models/sizeModel');
 const Improve = require('../models/howToImproveModel');
+const CancelationPolicy = require('../models/cancelationPolicyModel');
 
 
 
@@ -5163,5 +5164,91 @@ exports.deleteAllNotifications = async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ status: 500, message: 'Server error', error: error.message });
+    }
+};
+exports.createCancelationPolicy = async (req, res) => {
+    try {
+        const { mainCategoryId, categoryId, subCategoryId, content } = req.body;
+
+        // if (mainCategoryId || categoryId || subCategoryId || content) {
+        //     return res.status(400).json({ status: 400, message: 'All fields are required' });
+        // }
+
+        const cancelationPolicy = new CancelationPolicy({ mainCategoryId, categoryId, subCategoryId, content });
+        await cancelationPolicy.save();
+
+        return res.status(201).json({ status: 201, message: 'Cancellation policy created successfully', data: cancelationPolicy });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error', details: error.message });
+    }
+};
+exports.getAllCancelationPolicy = async (req, res) => {
+    try {
+        const cancelationPolicy = await CancelationPolicy.find();
+
+        if (!cancelationPolicy) {
+            return res.status(404).json({ status: 404, message: 'Cancelation and Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: "Sucessfully", data: cancelationPolicy });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+exports.getCancelationPolicyById = async (req, res) => {
+    try {
+        const cancelationPolicyId = req.params.id;
+        const cancelationPolicy = await CancelationPolicy.findById(cancelationPolicyId);
+
+        if (!cancelationPolicy) {
+            return res.status(404).json({ status: 404, message: 'Cancelation and Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Sucessfully', data: cancelationPolicy });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
+    }
+};
+exports.updateCancelationPolicyById = async (req, res) => {
+    try {
+        const cancelationPolicyId = req.params.id;
+        const { content } = req.body;
+
+        if (!content) {
+            return res.status(400).json({ status: 400, message: 'Content is required' });
+        }
+
+        const updatedCancelationPolicy = await CancelationPolicy.findByIdAndUpdate(
+            cancelationPolicyId,
+            { content },
+            { new: true }
+        );
+
+        if (!updatedCancelationPolicy) {
+            return res.status(404).json({ status: 404, message: 'Cancellation policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Cancellation policy updated successfully', data: updatedCancelationPolicy });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ status: 500, message: 'Internal server error', details: error.message });
+    }
+};
+exports.deleteCancelationPolicyById = async (req, res) => {
+    try {
+        const cancelationPolicyId = req.params.id;
+        const deletedCancelationPolicy = await CancelationPolicy.findByIdAndDelete(cancelationPolicyId);
+
+        if (!deletedCancelationPolicy) {
+            return res.status(404).json({ status: 404, message: 'Cancelation and Policy not found' });
+        }
+
+        return res.status(200).json({ status: 200, message: 'Cancelation and Policy deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error', details: error.message });
     }
 };
