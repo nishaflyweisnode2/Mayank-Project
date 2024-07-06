@@ -651,6 +651,30 @@ exports.getCart = async (req, res) => {
                                         model: 'Service'
                                 }
                         })
+                        .populate({
+                                path: 'addOnServices.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'addOnServices.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'addOnServices.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
 
                 if (!findCart) {
                         return res.status(404).json({ status: 404, message: "Cart not found for this user." });
