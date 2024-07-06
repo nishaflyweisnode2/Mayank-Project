@@ -1287,10 +1287,11 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                 }
                 let findPet;
                 if (req.body.pets) {
-                        findPet = await Pet.findOne({ breed: req.body.pets }).populate('breed');
+                        findPet = await Pet.findOne({ _id: req.body.pets }).populate('breed');
                 } else {
                         findPet = await Pet.findOne({ user: userData._id }).populate('breed');
                 }
+                console.log(findPet);
                 const findCart = await Cart.findOne({ userId: userData._id });
                 const findService = await service.findById({ _id: req.body._id, isAddOnServices: true });
 
