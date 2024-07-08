@@ -1977,6 +1977,114 @@ exports.getServiceWithUserPetSizeWise = async (req, res) => {
         return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
     }
 };
+exports.getServiceByUserPetSizeWise = async (req, res) => {
+    try {
+        const findMainCategory = await mainCategory.findById(req.params.mainCategoryId);
+        if (!findMainCategory) {
+            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
+        }
+
+        const findCategory = await Category.findOne({
+            mainCategoryId: findMainCategory._id,
+            _id: req.params.categoryId
+        });
+        if (!findCategory) {
+            return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
+        }
+
+        const findSubCategory = await subCategory.findOne({
+            _id: req.params.subCategoryId,
+            mainCategoryId: findMainCategory._id,
+            categoryId: findCategory._id,
+        });
+        if (!findSubCategory) {
+            return res.status(404).json({ message: "Subcategory Not Found", status: 404, data: {} });
+        }
+
+        const userCart = await Cart.findOne({ user: req.user.id });
+        const userPets = await Pet.find({ user: req.user.id });
+        console.log("userPets", userPets);
+        const petSizes = userPets.map(pet => pet.size);
+        console.log("petSizes", petSizes);
+
+        const sizeId = req.params.sizeId;
+
+        const filterVariationsByPetSize = (variations, sizeId) => {
+            const filteredVariations = variations.filter(variation => {
+                return variation.size._id.equals(sizeId);
+            });
+            return filteredVariations;
+        };
+
+        const findService = await service.find({
+            mainCategoryId: findMainCategory._id,
+            categoryId: findCategory._id,
+            subCategoryId: findSubCategory._id,
+            status: true,
+        }).populate('subCategoryId categoryId mainCategoryId')
+            .populate({
+                path: 'variations.size',
+                model: 'Size'
+            });
+
+        let servicesWithCartInfo = [];
+        let totalQuantityInCart = 0;
+        let totalIsInCart = 0;
+
+        if (findService.length > 0) {
+            servicesWithCartInfo = findService.map(product => {
+                const cartItem = userCart ? userCart.services.find(item => item.serviceId.equals(product._id)) : null;
+
+                let totalDiscountPriceItem = 0;
+                let isInCartItem = 0;
+
+                if (cartItem) {
+                    isInCartItem = 1;
+                    if (product.type === "Package") {
+                        totalDiscountPriceItem = product.discountActive && product.discountPrice ? product.discountPrice * cartItem.quantity : 0;
+                    } else {
+                        totalDiscountPriceItem = product.discountActive && product.discount ? product.discount * cartItem.quantity : 0;
+                    }
+                }
+
+                const countDiscountItem = product.discountActive ? 1 : 0;
+
+                totalQuantityInCart += cartItem ? cartItem.quantity : 0;
+                totalIsInCart += isInCartItem;
+
+                return {
+                    ...product.toObject(),
+                    isInCart: !!cartItem,
+                    quantityInCart: cartItem ? cartItem.quantity : 0,
+                    totalDiscountPrice: totalDiscountPriceItem,
+                    countDiscount: countDiscountItem,
+                    totalOriginalPrice: (product.originalPrice || 0) * (cartItem?.quantity || 0),
+                };
+            });
+
+            servicesWithCartInfo.forEach(service => {
+                if (service.variations.length > 0) {
+                    service.variations = filterVariationsByPetSize(service.variations, sizeId);
+                }
+            });
+
+            const response = {
+                message: "Services Found",
+                status: 200,
+                data: servicesWithCartInfo,
+                totalQuantityInCart,
+                totalIsInCart,
+            };
+
+            return res.status(200).json(response);
+        } else {
+            return res.status(404).json({ message: "Services not found.", status: 404, data: {} });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
 exports.getServiceWithoutSubCategory = async (req, res) => {
     try {
         const findMainCategory = await mainCategory.findById({ _id: req.params.mainCategoryId });
@@ -2136,6 +2244,101 @@ exports.getServiceWithoutSubCategoryWithUserPetSizeWise = async (req, res) => {
             servicesWithCartInfo.forEach(service => {
                 if (service.variations.length > 0) {
                     service.variations = filterVariationsByPetSize(service.variations);
+                }
+            });
+
+            const response = {
+                message: "Services Found",
+                status: 200,
+                data: servicesWithCartInfo,
+                totalQuantityInCart,
+                totalIsInCart,
+            };
+
+            return res.status(200).json(response);
+        } else {
+            return res.status(404).json({ message: "Services not found.", status: 404, data: {} });
+        }
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ status: 500, message: "Internal server error", data: error.message });
+    }
+};
+exports.getServiceWithoutSubCategoryByPetSizeWise = async (req, res) => {
+    try {
+        const findMainCategory = await mainCategory.findById({ _id: req.params.mainCategoryId });
+        if (!findMainCategory) {
+            return res.status(404).json({ message: "Main Category Not Found", status: 404, data: {} });
+        }
+
+        const findCategory = await Category.findOne({ mainCategoryId: findMainCategory._id, _id: req.params.categoryId });
+        if (!findCategory) {
+            return res.status(404).json({ message: "Category Not Found", status: 404, data: {} });
+        }
+
+        const userCart = await Cart.findOne({ user: req.user.id });
+        const userPets = await Pet.find({ user: req.user.id });
+        console.log("userPets", userPets);
+        const petSizes = userPets.map(pet => pet.size);
+        console.log("petSizes", petSizes);
+
+        const sizeId = req.params.sizeId; 
+
+        const filterVariationsByPetSize = (variations, sizeId) => {
+            const filteredVariations = variations.filter(variation => {
+                return variation.size._id.equals(sizeId);
+            });
+            return filteredVariations;
+        };
+
+        const findService = await service.find({
+            mainCategoryId: findMainCategory._id,
+            categoryId: findCategory._id,
+            status: true,
+        }).populate('categoryId mainCategoryId')
+            .populate({
+                path: 'variations.size',
+                model: 'Size'
+            });
+
+        let servicesWithCartInfo = [];
+        let totalQuantityInCart = 0;
+        let totalIsInCart = 0;
+
+        if (findService.length > 0) {
+            servicesWithCartInfo = findService.map(product => {
+                const cartItem = userCart ? userCart.services.find(item => item.serviceId.equals(product._id)) : null;
+
+                let totalDiscountPriceItem = 0;
+                let isInCartItem = 0;
+
+                if (cartItem) {
+                    isInCartItem = 1;
+                    if (product.type === "Package") {
+                        totalDiscountPriceItem = product.discountActive && product.discountPrice ? product.discountPrice * cartItem.quantity : 0;
+                    } else {
+                        totalDiscountPriceItem = product.discountActive && product.discount ? product.discount * cartItem.quantity : 0;
+                    }
+                }
+
+                const countDiscountItem = product.discountActive ? 1 : 0;
+
+                totalQuantityInCart += cartItem ? cartItem.quantity : 0;
+                totalIsInCart += isInCartItem;
+
+                return {
+                    ...product.toObject(),
+                    isInCart: !!cartItem,
+                    quantityInCart: cartItem ? cartItem.quantity : 0,
+                    totalDiscountPrice: totalDiscountPriceItem,
+                    countDiscount: countDiscountItem,
+                    totalOriginalPrice: (product.originalPrice || 0) * (cartItem?.quantity || 0),
+                };
+            });
+
+            servicesWithCartInfo.forEach(service => {
+                if (service.variations.length > 0) {
+                    service.variations = filterVariationsByPetSize(service.variations, sizeId);
                 }
             });
 
