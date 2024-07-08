@@ -82,7 +82,9 @@ module.exports = (app) => {
         app.delete("/api/v1/admin/Item/delete/:id", [authJwt.verifyToken], auth.removeItem);
         app.post("/api/v1/admin/Service/addService", [authJwt.verifyToken], serviceUpload.array('image'), auth.createService);
         app.get("/api/v1/admin/Service/:mainCategoryId/:categoryId/:subCategoryId", [authJwt.verifyToken], auth.getService);
+        app.get("/api/v1/admin/Service/petsize-wise/:mainCategoryId/:categoryId/:subCategoryId", [authJwt.verifyToken], auth.getServiceWithUserPetSizeWise);
         app.get("/api/v1/admin/Service-without-sub/:mainCategoryId/:categoryId", [authJwt.verifyToken], auth.getServiceWithoutSubCategory);
+        app.get("/api/v1/admin/Service-without-sub/petsize-wise/:mainCategoryId/:categoryId", [authJwt.verifyToken], auth.getServiceWithoutSubCategoryWithUserPetSizeWise);
         app.get("/api/v1/admin/Service-with-MAinCategory/:mainCategoryId", [authJwt.verifyToken], auth.getServiceWithMainCategory);
         app.get("/api/v1/admin/Service/getAllService", [authJwt.verifyToken], auth.getAllService);
         app.get('/api/v1/admin/service/:id', [authJwt.verifyToken], auth.getServiceById);
