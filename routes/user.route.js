@@ -42,7 +42,9 @@ module.exports = (app) => {
         app.put("/api/v1/user/Cart/provideTip", [authJwt.verifyToken], auth.provideTip);
         app.get("/api/v1/user/Coupan/listCoupan", [authJwt.verifyToken], auth.listCoupan);
         app.put("/api/v1/user/Cart/applyCoupan", [authJwt.verifyToken], auth.applyCoupan);
+        app.delete("/api/v1/user/Cart/removeCoupan", [authJwt.verifyToken], auth.removeCoupan);
         app.put("/api/v1/user/Cart/applyWallet", [authJwt.verifyToken], auth.applyWallet);
+        app.delete("/api/v1/user/Cart/removeWallet", [authJwt.verifyToken], auth.removeWallet);
         app.put("/api/v1/user/Cart/addFreeServiceToCart", [authJwt.verifyToken], auth.addFreeServiceToCart);
         app.put("/api/v1/user/Cart/addSuggestionToCart", [authJwt.verifyToken], auth.addSuggestionToCart);
         app.put("/api/v1/user/Cart/addAdressToCart/:id", [authJwt.verifyToken], auth.addAdressToCart);

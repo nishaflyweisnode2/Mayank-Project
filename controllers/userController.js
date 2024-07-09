@@ -2832,7 +2832,48 @@ exports.applyCoupan = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-exports.applyWallet = async (req, res) => {
+exports.removeCoupan = async (req, res) => {
+        try {
+                let userData = await User.findOne({ _id: req.user._id });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let findCart = await Cart.findOne({ userId: userData._id });
+                if (!findCart) {
+                        return res.status(404).json({ status: 404, message: "Cart is empty.", data: {} });
+                }
+
+                if (findCart.services.length == 0) {
+                        return res.status(404).json({ status: 404, message: "First add service in your cart.", data: {} });
+                }
+
+                let additionalFee = findCart.additionalFee || 0;
+                let coupan = findCart.coupan || 0;
+                let wallet = findCart.wallet || 0;
+                let tipProvided = findCart.tipProvided || 0;
+
+                let paidAmount = findCart.totalAmount + additionalFee + tipProvided - wallet;
+
+                let updatedCart = await Cart.findByIdAndUpdate(
+                        { _id: findCart._id },
+                        {
+                                $set: {
+                                        coupanUsed: false,
+                                        coupan: 0,
+                                        paidAmount: paidAmount,
+                                }
+                        },
+                        { new: true }
+                );
+
+                return res.status(200).json({ status: 200, message: "Coupon removed from cart successfully.", data: updatedCart });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error: " + error.message });
+        }
+};
+exports.applyWallet1 = async (req, res) => {
         try {
                 let userData = await User.findOne({ _id: req.user._id });
                 if (!userData) {
@@ -2892,6 +2933,151 @@ exports.applyWallet = async (req, res) => {
         } catch (error) {
                 console.error(error);
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
+exports.applyWallet = async (req, res) => {
+        try {
+                let userData = await User.findOne({ _id: req.user._id });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let findCart = await Cart.findOne({ userId: userData._id });
+                if (!findCart) {
+                        return res.status(404).json({ status: 404, message: "Cart is empty.", data: {} });
+                }
+
+                if (findCart.services.length == 0) {
+                        return res.status(404).json({ status: 404, message: "First add service in your cart.", data: {} });
+                }
+
+                let Charged = [],
+                        paidAmount = 0,
+                        additionalFee = 0,
+                        coupan = 0,
+                        wallet = 0,
+                        walletUsed = false,
+                        tipProvided = 0;
+
+                const findCharge = await Charges.find({});
+                if (findCharge.length > 0) {
+                        findCharge.forEach(charge => {
+                                let chargeObj = {
+                                        chargeId: charge._id,
+                                        charge: charge.charge,
+                                        discountCharge: charge.discountCharge,
+                                        discount: charge.discount,
+                                        cancelation: charge.cancelation,
+                                };
+
+                                if (!charge.cancelation) {
+                                        additionalFee += charge.discount ? charge.discountCharge : charge.charge;
+                                }
+
+                                Charged.push(chargeObj);
+                        });
+                }
+
+                if (findCart.coupanUsed) {
+                        let findCoupan = await Coupan.findById({ _id: findCart.coupanId });
+                        if (findCoupan) {
+                                coupan = findCoupan.discount;
+                        }
+                }
+
+                if (userData.wallet > 0) {
+                        wallet = userData.wallet;
+                        walletUsed = true;
+                }
+
+                if (findCart.tip) {
+                        tipProvided = findCart.tipProvided;
+                }
+
+                paidAmount = findCart.totalAmount + additionalFee + tipProvided - coupan;
+
+                let walletDeduction = 0;
+                if (wallet >= paidAmount) {
+                        walletDeduction = paidAmount
+                        paidAmount = 0;
+                } else {
+                        walletDeduction = wallet;
+                        paidAmount -= wallet;
+                }
+
+                userData.wallet -= walletDeduction;
+                await userData.save();
+
+                let updatedCart = await Cart.findByIdAndUpdate(
+                        { _id: findCart._id },
+                        {
+                                $set: {
+                                        Charges: Charged,
+                                        tip: findCart.tip,
+                                        tipProvided: tipProvided,
+                                        walletUsed: walletUsed,
+                                        coupanUsed: findCart.coupanUsed,
+                                        freeServiceUsed: findCart.freeServiceUsed,
+                                        wallet: walletDeduction,
+                                        coupan: coupan,
+                                        freeService: findCart.freeService,
+                                        totalAmount: findCart.totalAmount,
+                                        additionalFee: additionalFee,
+                                        paidAmount: paidAmount,
+                                        totalItem: findCart.totalItem
+                                }
+                        },
+                        { new: true }
+                );
+
+                return res.status(200).json({ status: 200, message: "Wallet applied on cart successfully.", data: updatedCart });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error: " + error.message });
+        }
+};
+exports.removeWallet = async (req, res) => {
+        try {
+                let userData = await User.findOne({ _id: req.user._id });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                let findCart = await Cart.findOne({ userId: userData._id });
+                if (!findCart) {
+                        return res.status(404).json({ status: 404, message: "Cart is empty.", data: {} });
+                }
+
+                if (findCart.services.length == 0) {
+                        return res.status(404).json({ status: 404, message: "First add service in your cart.", data: {} });
+                }
+
+                let additionalFee = findCart.additionalFee || 0;
+                let coupan = findCart.coupan || 0;
+                let wallet = findCart.wallet || 0;
+                let tipProvided = findCart.tipProvided || 0;
+
+                userData.wallet += wallet;
+                await userData.save();
+
+                let paidAmount = findCart.totalAmount + additionalFee + tipProvided - coupan;
+
+                let updatedCart = await Cart.findByIdAndUpdate(
+                        { _id: findCart._id },
+                        {
+                                $set: {
+                                        walletUsed: false,
+                                        wallet: 0,
+                                        paidAmount: paidAmount,
+                                }
+                        },
+                        { new: true }
+                );
+
+                return res.status(200).json({ status: 200, message: "Wallet removed from cart successfully.", data: updatedCart });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error: " + error.message });
         }
 };
 exports.addFreeServiceToCart = async (req, res) => {
