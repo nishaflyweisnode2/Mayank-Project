@@ -2141,7 +2141,7 @@ exports.getServiceWithoutSubCategory = async (req, res) => {
                     ...product.toObject(),
                     quantityInCart: cartItem ? cartItem.quantity : 0,
                     totalDiscountPrice: totalDiscountPriceItem,
-                    countDiscount: countDiscountItem,
+                    // countDiscount: countDiscountItem,
                 };
             });
         } else if (findService.length > 0) {
