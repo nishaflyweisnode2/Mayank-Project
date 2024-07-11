@@ -1013,9 +1013,26 @@ exports.addToCartSingleService = async (req, res) => {
                 let discountPrice = 0;
                 let discount = 0;
 
+                let walksPerDay = 0;
+                let daysPerWeek = 0;
+                let timeSlots = [];
+
+
                 if (findService.variations && findService.variations.length > 0) {
+                        let variation;
                         // const variation = findService.variations[0];
-                        const variation = findService.variations.find(v => v.size.toString() === findPet.size.toString());
+                        const reqWalksPerDay = req.body.walksPerDay || 0;
+                        const reqDaysPerWeek = req.body.daysPerWeek || 0;
+
+                        if (req.body.walksPerDay || req.body.daysPerWeek) {
+                                variation = findService.variations.find(v => {
+                                        return v.size.toString() === findPet.size.toString() &&
+                                                (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
+                                                (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
+                                });
+                        } else {
+                                variation = findService.variations.find(v => v.size.toString() === findPet.size.toString());
+                        }
                         console.log("findService.variations", findService.variations);
                         console.log("findPet.size", findPet.size);
                         console.log("variation", variation);
@@ -1023,6 +1040,13 @@ exports.addToCartSingleService = async (req, res) => {
                         if (!variation) {
                                 return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
                         }
+
+                        if (req.body.walksPerDay) {
+                                walksPerDay = variation.walksPerDay !== undefined ? variation.walksPerDay : reqWalksPerDay;
+                                daysPerWeek = variation.daysPerWeek !== undefined ? variation.daysPerWeek : reqDaysPerWeek;
+                                timeSlots = req.body.timeSlots || [];
+                        }
+
                         const month = req.body.month;
                         if (month) {
                                 switch (month) {
@@ -1140,6 +1164,9 @@ exports.addToCartSingleService = async (req, res) => {
                                 totalItem: 1,
                                 size: findPet.size,
                                 pets: findPet._id,
+                                walksPerDay: walksPerDay || 0,
+                                daysPerWeek: daysPerWeek || 0,
+                                timeSlots: timeSlots || [],
                         };
 
                         if (findCart) {
@@ -1635,10 +1662,38 @@ exports.addToCartPackageEssential = async (req, res) => {
                 let discountPrice = 0;
                 const month = req.body.month;
 
+                let walksPerDay = 0;
+                let daysPerWeek = 0;
+                let timeSlots = [];
+
+
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        const variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        let variation;
+                        // const variation = findPackage.variations[0];
+                        const reqWalksPerDay = req.body.walksPerDay || 0;
+                        const reqDaysPerWeek = req.body.daysPerWeek || 0;
+
+                        if (req.body.walksPerDay || req.body.daysPerWeek) {
+                                variation = findPackage.variations.find(v => {
+                                        return v.size.toString() === findPet.size.toString() &&
+                                                (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
+                                                (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
+                                });
+                        } else {
+                                variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        }
+                        console.log("findPackage.variations", findPackage.variations);
+                        console.log("findPet.size", findPet.size);
+                        console.log("variation", variation);
+
                         if (!variation) {
                                 return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
+                        }
+
+                        if (req.body.walksPerDay) {
+                                walksPerDay = variation.walksPerDay !== undefined ? variation.walksPerDay : reqWalksPerDay;
+                                daysPerWeek = variation.daysPerWeek !== undefined ? variation.daysPerWeek : reqDaysPerWeek;
+                                timeSlots = req.body.timeSlots || [];
                         }
 
                         if (month) {
@@ -1743,6 +1798,9 @@ exports.addToCartPackageEssential = async (req, res) => {
                                 totalItem: 1,
                                 size: findPet.size,
                                 pets: findPet._id,
+                                walksPerDay: walksPerDay || 0,
+                                daysPerWeek: daysPerWeek || 0,
+                                timeSlots: timeSlots || [],
                         };
 
                         findCart = await Cart.create(obj);
@@ -1795,10 +1853,38 @@ exports.addToCartPackageStandard = async (req, res) => {
                 let discountPrice = 0;
                 const month = req.body.month;
 
+                let walksPerDay = 0;
+                let daysPerWeek = 0;
+                let timeSlots = [];
+
+
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        const variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        let variation;
+                        // const variation = findPackage.variations[0];
+                        const reqWalksPerDay = req.body.walksPerDay || 0;
+                        const reqDaysPerWeek = req.body.daysPerWeek || 0;
+
+                        if (req.body.walksPerDay || req.body.daysPerWeek) {
+                                variation = findPackage.variations.find(v => {
+                                        return v.size.toString() === findPet.size.toString() &&
+                                                (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
+                                                (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
+                                });
+                        } else {
+                                variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        }
+                        console.log("findPackage.variations", findPackage.variations);
+                        console.log("findPet.size", findPet.size);
+                        console.log("variation", variation);
+
                         if (!variation) {
                                 return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
+                        }
+
+                        if (req.body.walksPerDay) {
+                                walksPerDay = variation.walksPerDay !== undefined ? variation.walksPerDay : reqWalksPerDay;
+                                daysPerWeek = variation.daysPerWeek !== undefined ? variation.daysPerWeek : reqDaysPerWeek;
+                                timeSlots = req.body.timeSlots || [];
                         }
 
                         if (month) {
@@ -1903,6 +1989,9 @@ exports.addToCartPackageStandard = async (req, res) => {
                                 totalItem: 1,
                                 size: findPet.size,
                                 pets: findPet._id,
+                                walksPerDay: walksPerDay || 0,
+                                daysPerWeek: daysPerWeek || 0,
+                                timeSlots: timeSlots || [],
                         };
 
                         findCart = await Cart.create(obj);
@@ -1955,11 +2044,40 @@ exports.addToCartPackagePro = async (req, res) => {
                 let discountPrice = 0;
                 const month = req.body.month;
 
+                let walksPerDay = 0;
+                let daysPerWeek = 0;
+                let timeSlots = [];
+
+
                 if (findPackage.variations && findPackage.variations.length > 0) {
-                        const variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        let variation;
+                        // const variation = findPackage.variations[0];
+                        const reqWalksPerDay = req.body.walksPerDay || 0;
+                        const reqDaysPerWeek = req.body.daysPerWeek || 0;
+
+                        if (req.body.walksPerDay || req.body.daysPerWeek) {
+                                variation = findPackage.variations.find(v => {
+                                        return v.size.toString() === findPet.size.toString() &&
+                                                (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
+                                                (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
+                                });
+                        } else {
+                                variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        }
+                        console.log("findPackage.variations", findPackage.variations);
+                        console.log("findPet.size", findPet.size);
+                        console.log("variation", variation);
+
                         if (!variation) {
                                 return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
                         }
+
+                        if (req.body.walksPerDay) {
+                                walksPerDay = variation.walksPerDay !== undefined ? variation.walksPerDay : reqWalksPerDay;
+                                daysPerWeek = variation.daysPerWeek !== undefined ? variation.daysPerWeek : reqDaysPerWeek;
+                                timeSlots = req.body.timeSlots || [];
+                        }
+
 
                         if (month) {
                                 switch (month) {
@@ -2063,6 +2181,9 @@ exports.addToCartPackagePro = async (req, res) => {
                                 totalItem: 1,
                                 size: findPet.size,
                                 pets: findPet._id,
+                                walksPerDay: walksPerDay || 0,
+                                daysPerWeek: daysPerWeek || 0,
+                                timeSlots: timeSlots || [],
                         };
 
                         findCart = await Cart.create(obj);

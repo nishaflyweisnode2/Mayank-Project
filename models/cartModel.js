@@ -200,6 +200,17 @@ const CartSchema = new Schema({
                 type: Number,
                 default: 0
         },
+        walksPerDay: {
+                type: Number,
+                default: 0
+        },
+        daysPerWeek: {
+                type: Number,
+                default: 0
+        },
+        timeSlots: [{
+                type: String,
+        }],
         size: {
                 type: Schema.Types.ObjectId,
                 ref: 'Size',
