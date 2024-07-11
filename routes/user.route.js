@@ -99,6 +99,8 @@ module.exports = (app) => {
         app.post('/api/v1/user/orders/:orderId/reportIssue', [authJwt.verifyToken], auth.reportIssue);
         app.get('/api/v1/user/orders/:orderId/reportIssue', [authJwt.verifyToken], auth.getIssueReports);
         app.get('/api/v1/user/slot', [authJwt.verifyToken], auth.getAllSlots);
+        app.get('/api/v1/user/slot/service/:id', [authJwt.verifyToken], auth.getAllSlotsByService);
+        app.get('/api/v1/user/slot/package/:id', [authJwt.verifyToken], auth.getAllSlotsByPackage);
         app.get('/api/v1/user/slot/:id', [authJwt.verifyToken], auth.getSlotById);
         app.get('/api/v1/user/city/cities', [authJwt.verifyToken], auth.getAllCities);
         app.get('/api/v1/user/city/cities/:id', [authJwt.verifyToken], auth.getCityById);

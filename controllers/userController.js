@@ -5243,6 +5243,154 @@ exports.getAllSlots = async (req, res) => {
                 });
         }
 };
+exports.getAllSlotsByService = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const serviceId = req.params.id;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "User not found", data: {} });
+                }
+
+                const findService = await service.findOne({ _id: serviceId });
+                if (!findService) {
+                        return res.status(404).json({ status: 404, message: "Service not found." });
+                }
+
+                let mainCategories = findService.mainCategoryId || [];
+
+                if (!Array.isArray(mainCategories)) {
+                        mainCategories = [mainCategories];
+                }
+
+                if (mainCategories.length === 0) {
+                        return res.status(404).json({ status: 404, message: "No main categories found for the service." });
+                }
+
+                const attendances = await Attendance.find({ mainCategoryId: { $in: mainCategories } });
+                if (!attendances || attendances.length === 0) {
+                        return res.status(403).json({ status: 403, message: "Attendance not marked for this partner user", data: {} });
+                }
+
+                const slots = await Slot.find({ mainCategory: { $in: mainCategories } });
+                const categorizedSlots = {};
+
+                mainCategories.forEach(category => {
+                        const categoryObjectId = new mongoose.Types.ObjectId(category);
+                        const filteredSlots = slots.filter(slot => slot.mainCategory.equals(categoryObjectId));
+
+                        const availableSlots = filteredSlots.filter(slot => {
+                                const relevantAttendances = attendances.filter(att => att.mainCategoryId.equals(categoryObjectId));
+
+                                const isSlotAvailable = relevantAttendances.some(attendance => {
+                                        if (attendance.timeSlots) {
+                                                const isTimeSlotAvailable = attendance.timeSlots.some(timeSlot => {
+                                                        return timeSlot.available && timeSlot.startTime <= slot.timeFrom && timeSlot.endTime >= slot.timeTo;
+                                                });
+
+                                                const isJobAcceptable = slot.jobAcceptance !== slot.totalBookedUsers;
+
+                                                return isTimeSlotAvailable && isJobAcceptable;
+                                        }
+                                        return false;
+                                });
+
+                                return isSlotAvailable;
+                        });
+
+                        console.log("availableSlots", availableSlots);
+                        categorizedSlots[category] = availableSlots;
+                });
+
+                return res.status(200).json({
+                        status: 200,
+                        message: 'Slots retrieved successfully.',
+                        data: categorizedSlots,
+                });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({
+                        status: 500,
+                        message: 'Internal server error',
+                        data: error.message,
+                });
+        }
+};
+exports.getAllSlotsByPackage = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const serviceId = req.params.id;
+
+                const user = await User.findOne({ _id: userId });
+                if (!user) {
+                        return res.status(404).json({ status: 404, message: "User not found", data: {} });
+                }
+
+                const findService = await Package.findOne({ _id: serviceId });
+                if (!findService) {
+                        return res.status(404).json({ status: 404, message: "Package not found." });
+                }
+
+                let mainCategories = findService.mainCategoryId || [];
+
+                if (!Array.isArray(mainCategories)) {
+                        mainCategories = [mainCategories];
+                }
+
+                if (mainCategories.length === 0) {
+                        return res.status(404).json({ status: 404, message: "No main categories found for the service." });
+                }
+
+                const attendances = await Attendance.find({ mainCategoryId: { $in: mainCategories } });
+                if (!attendances || attendances.length === 0) {
+                        return res.status(403).json({ status: 403, message: "Attendance not marked for this partner user", data: {} });
+                }
+
+                const slots = await Slot.find({ mainCategory: { $in: mainCategories } });
+                const categorizedSlots = {};
+
+                mainCategories.forEach(category => {
+                        const categoryObjectId = new mongoose.Types.ObjectId(category);
+                        const filteredSlots = slots.filter(slot => slot.mainCategory.equals(categoryObjectId));
+
+                        const availableSlots = filteredSlots.filter(slot => {
+                                const relevantAttendances = attendances.filter(att => att.mainCategoryId.equals(categoryObjectId));
+
+                                const isSlotAvailable = relevantAttendances.some(attendance => {
+                                        if (attendance.timeSlots) {
+                                                const isTimeSlotAvailable = attendance.timeSlots.some(timeSlot => {
+                                                        return timeSlot.available && timeSlot.startTime <= slot.timeFrom && timeSlot.endTime >= slot.timeTo;
+                                                });
+
+                                                const isJobAcceptable = slot.jobAcceptance !== slot.totalBookedUsers;
+
+                                                return isTimeSlotAvailable && isJobAcceptable;
+                                        }
+                                        return false;
+                                });
+
+                                return isSlotAvailable;
+                        });
+
+                        console.log("availableSlots", availableSlots);
+                        categorizedSlots[category] = availableSlots;
+                });
+
+                return res.status(200).json({
+                        status: 200,
+                        message: 'Slots retrieved successfully.',
+                        data: categorizedSlots,
+                });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).json({
+                        status: 500,
+                        message: 'Internal server error',
+                        data: error.message,
+                });
+        }
+};
 exports.getSlotById = async (req, res) => {
         try {
                 const slot = await Slot.findById(req.params.id);
