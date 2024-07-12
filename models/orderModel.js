@@ -229,7 +229,7 @@ const DocumentSchema = Schema({
         },
         status: {
                 type: String,
-                enum: ["Pending", "Confirmed", "Assigned", "OnTheWay", "Arrived", "Complete", "Review"],
+                enum: ["Pending", "Confirmed", "Assigned", "Next-Appointment", "Arrived", "Complete", "Review"],
                 default: "Pending",
         },
         paymentStatus: {

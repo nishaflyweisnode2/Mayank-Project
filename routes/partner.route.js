@@ -68,6 +68,7 @@ module.exports = (app) => {
         app.put('/api/v1/partner/updateBankDetails', [authJwt.verifyToken], cheque.single('image'), auth.updateBankDetails);
         app.post("/api/v1/partner/bookings/verify", [authJwt.verifyToken], auth.approveAadharVerifyOtp);
         app.post("/api/v1/partner/bookings/resendOtp", [authJwt.verifyToken], auth.approveAadharResendOTP);
+        app.get("/api/v1/partner/getOnboardingProfile", [authJwt.verifyToken], auth.getOnboardingProfile);
         app.put('/api/v1/partner/switchRole/:roleId', [authJwt.verifyToken], auth.switchRole)
         app.get('/api/v1/partner/currentRole', [authJwt.verifyToken], auth.getCurrentRole)
         app.get("/api/v1/partner/getIdCard", [authJwt.verifyToken], auth.getIdCard);

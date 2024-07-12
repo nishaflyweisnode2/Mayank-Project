@@ -928,6 +928,20 @@ exports.approveAadharResendOTP = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
+exports.getOnboardingProfile = async (req, res) => {
+        try {
+                const data = await OnboardingDetails.findOne({ userId: req.user._id, });
+
+                if (data) {
+                        return res.status(200).json({ status: 200, message: "get Profile", data: data });
+                } else {
+                        return res.status(404).json({ status: 404, message: "No data found", data: {} });
+                }
+        } catch (error) {
+                console.log(error);
+                return res.status(501).send({ status: 501, message: "server error.", data: {}, });
+        }
+};
 exports.switchRole = async (req, res) => {
         try {
                 const partnerId = req.user._id;
