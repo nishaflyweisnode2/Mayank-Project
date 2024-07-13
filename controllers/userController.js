@@ -987,7 +987,7 @@ exports.addToCartSingleService1 = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-exports.addToCartSingleService = async (req, res) => {
+exports.addToCartSingleService2 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
                 if (!userData) {
@@ -1186,6 +1186,202 @@ exports.addToCartSingleService = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
+exports.addToCartSingleService = async (req, res) => {
+        try {
+                const userData = await User.findOne({ _id: req.user._id });
+                if (!userData) {
+                        return res.status(400).json({ status: 400, message: "User not found." });
+                }
+
+                let pets = [];
+                if (req.body.pets && req.body.pets.length > 0) {
+                        pets = await Pet.find({ _id: { $in: req.body.pets } }).populate('breed');
+                } else {
+                        pets = await Pet.find({ user: userData._id }).populate('breed');
+                }
+
+                if (!pets || pets.length === 0) {
+                        return res.status(404).json({ status: 404, message: "No pets found for the user." });
+                }
+
+                const findCart = await Cart.findOne({ userId: userData._id });
+                const findService = await service.findById({ _id: req.body._id });
+
+                if (!findService) {
+                        return res.status(404).json({ status: 404, message: "Service not found" });
+                }
+
+                let totalOriginalPrice = 0;
+                let totalDiscountPrice = 0;
+                let discountActive = false;
+
+                let walksPerDay = req.body.walksPerDay || 0;
+                let daysPerWeek = req.body.daysPerWeek || 0;
+                let timeSlots = req.body.timeSlots || [];
+
+                const reqWalksPerDay = req.body.walksPerDay || 0;
+                const reqDaysPerWeek = req.body.daysPerWeek || 0;
+
+                for (const pet of pets) {
+                        let variation = findService.variations.find(v => {
+                                return v.size.toString() === pet.size.toString() &&
+                                        (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
+                                        (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
+                        });
+
+                        if (!variation) {
+                                return res.status(400).json({ status: 400, message: `No matching variation for pet size: ${pet.size}` });
+                        }
+
+                        let originalPrice = 0;
+                        let discountPrice = 0;
+
+                        const month = req.body.month;
+                        if (month) {
+                                switch (month) {
+                                        case 'oneTime':
+                                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                discountActive = variation.oneTimediscountActive || false;
+                                                discountPrice = variation.oneTimediscountPrice || 0;
+                                                break;
+                                        case 'monthly':
+                                                originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                discountActive = variation.MonthlydiscountActive || false;
+                                                discountPrice = variation.MonthlydiscountPrice || 0;
+                                                break;
+                                        case 'threeMonth':
+                                                originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                discountActive = variation.threeMonthdiscountActive || false;
+                                                discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                break;
+                                        case 'sixMonth':
+                                                originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                discountActive = variation.sixMonthdiscountActive || false;
+                                                discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                break;
+                                        case 'twelveMonth':
+                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                discountActive = variation.twelveMonthdiscountActive || false;
+                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                break;
+                                        default:
+                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                }
+                        } else {
+                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                discountActive = variation.oneTimediscountActive || false;
+                                discountPrice = variation.oneTimediscountPrice || 0;
+                        }
+
+                        totalOriginalPrice += originalPrice;
+                        if (discountActive) {
+                                totalDiscountPrice += discountPrice;
+                        } else {
+                                totalDiscountPrice += originalPrice;
+                        }
+                }
+
+                let discount = 0;
+                if (discountActive && totalOriginalPrice > 0 && totalDiscountPrice > 0) {
+                        discount = ((totalOriginalPrice - totalDiscountPrice) / totalOriginalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                }
+
+                let Charged = [];
+                let paidAmount = 0;
+                let totalAmount = 0;
+                let additionalFee = 0;
+
+                const findCharge = await Charges.find({});
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                if (findService.type == "Service") {
+                        let price = totalDiscountPrice || totalOriginalPrice || 0;
+                        let quantity = req.body.quantity;
+
+                        if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                                return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                        }
+
+                        totalAmount = Number((price * quantity).toFixed(2));
+                        paidAmount = Number((totalAmount + additionalFee).toFixed(2));
+
+                        if (isNaN(totalAmount) || isNaN(paidAmount)) {
+                                return res.status(500).json({ status: 500, message: "Invalid total or paidAmount values." });
+                        }
+
+                        if (findCart) {
+                                const existingService = findCart.services.find(service => service.serviceId.equals(findService._id));
+
+                                if (existingService) {
+                                        existingService.quantity += quantity;
+                                        existingService.total = price * existingService.quantity;
+                                        findCart.totalAmount += price * quantity;
+                                        findCart.paidAmount += price * quantity;
+                                        await findCart.save();
+                                        return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                                }
+                        }
+
+                        let obj = {
+                                userId: userData._id,
+                                Charges: Charged,
+                                services: [{
+                                        serviceId: findService._id,
+                                        serviceType: findService.serviceType,
+                                        packageServices: req.body.packageServices,
+                                        price: price,
+                                        quantity: quantity,
+                                        total: totalAmount,
+                                        type: "Service",
+                                }],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                size: pets.map(pet => pet.size),
+                                pets: pets.map(pet => pet._id),
+                                walksPerDay: walksPerDay,
+                                daysPerWeek: daysPerWeek,
+                                timeSlots: timeSlots,
+                        };
+
+                        if (findCart) {
+                                findCart.services.push(obj.services[0]);
+                                findCart.totalAmount += obj.totalAmount;
+                                findCart.paidAmount += obj.totalAmount;
+                                findCart.totalItem++;
+                                await findCart.save();
+                                return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                        } else {
+                                const Data = await Cart.create(obj);
+                                return res.status(200).json({ status: 200, message: "Service successfully added to the cart.", data: Data });
+                        }
+                }
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
 exports.addToCartAddOnSingleService1 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -1330,7 +1526,7 @@ exports.addToCartAddOnSingleService1 = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-exports.addToCartAddOnSingleService = async (req, res) => {
+exports.addToCartAddOnSingleService2 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
                 if (!userData) {
@@ -1498,6 +1694,188 @@ exports.addToCartAddOnSingleService = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
+exports.addToCartAddOnSingleService = async (req, res) => {
+        try {
+                const userData = await User.findOne({ _id: req.user._id });
+                if (!userData) {
+                        return res.status(400).json({ status: 400, message: "User not found." });
+                }
+
+                let pets = [];
+                if (req.body.pets && req.body.pets.length > 0) {
+                        pets = await Pet.find({ _id: { $in: req.body.pets } }).populate('breed');
+                } else {
+                        pets = await Pet.find({ user: userData._id }).populate('breed');
+                }
+
+                if (!pets || pets.length === 0) {
+                        return res.status(404).json({ status: 404, message: "No pets found for the user." });
+                }
+
+                const findCart = await Cart.findOne({ userId: userData._id });
+                const findService = await service.findById({ _id: req.body._id, isAddOnServices: true });
+
+                if (!findService || !findService.isAddOnService) {
+                        return res.status(404).json({ status: 404, message: "Add-on service not found." });
+                    }
+
+                let totalOriginalPrice = 0;
+                let totalDiscountPrice = 0;
+                let discountActive = false;
+
+                const month = req.body.month;
+
+                for (const pet of pets) {
+                        const variation = findService.variations.find(v => v.size.toString() === pet.size.toString());
+                        if (!variation) {
+                                return res.status(400).json({ status: 400, message: `No matching variation for pet size: ${pet.size}` });
+                        }
+
+                        let originalPrice = 0;
+                        let discountPrice = 0;
+
+                        if (month) {
+                                switch (month) {
+                                        case 'oneTime':
+                                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                discountActive = variation.oneTimediscountActive || false;
+                                                discountPrice = variation.oneTimediscountPrice || 0;
+                                                break;
+                                        case 'monthly':
+                                                originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                discountActive = variation.MonthlydiscountActive || false;
+                                                discountPrice = variation.MonthlydiscountPrice || 0;
+                                                break;
+                                        case 'threeMonth':
+                                                originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                discountActive = variation.threeMonthdiscountActive || false;
+                                                discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                break;
+                                        case 'sixMonth':
+                                                originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                discountActive = variation.sixMonthdiscountActive || false;
+                                                discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                break;
+                                        case 'twelveMonth':
+                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                discountActive = variation.twelveMonthdiscountActive || false;
+                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                break;
+                                        default:
+                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                }
+                        } else {
+                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                discountActive = variation.oneTimediscountActive || false;
+                                discountPrice = variation.oneTimediscountPrice || 0;
+                        }
+
+                        totalOriginalPrice += originalPrice;
+                        if (discountActive) {
+                                totalDiscountPrice += discountPrice;
+                        } else {
+                                totalDiscountPrice += originalPrice;
+                        }
+                }
+
+                let discount = 0;
+                if (discountActive && totalOriginalPrice > 0 && totalDiscountPrice > 0) {
+                        discount = ((totalOriginalPrice - totalDiscountPrice) / totalOriginalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                }
+
+                let Charged = [];
+                let paidAmount = 0;
+                let totalAmount = 0;
+                let additionalFee = 0;
+
+                const findCharge = await Charges.find({});
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                if (findService.type == "Service") {
+                        let price = totalDiscountPrice || totalOriginalPrice || 0;
+                        let quantity = req.body.quantity;
+
+                        if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                                return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                        }
+
+                        totalAmount = Number((price * quantity).toFixed(2));
+                        paidAmount = Number((totalAmount + additionalFee).toFixed(2));
+
+                        if (isNaN(totalAmount) || isNaN(paidAmount)) {
+                                return res.status(500).json({ status: 500, message: "Invalid total or paidAmount values." });
+                        }
+
+                        if (findCart) {
+                                const existingService = findCart.addOnServices.find(service => service.serviceId.equals(findService._id));
+
+                                if (existingService) {
+                                        existingService.quantity += quantity;
+                                        existingService.total = price * existingService.quantity;
+                                        findCart.totalAmount += price * quantity;
+                                        findCart.paidAmount += price * quantity;
+                                        await findCart.save();
+                                        return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                                }
+                        }
+
+                        let obj = {
+                                userId: userData._id,
+                                Charges: Charged,
+                                addOnServices: [{
+                                        serviceId: findService._id,
+                                        serviceType: findService.serviceType,
+                                        packageServices: req.body.packageServices,
+                                        price: price,
+                                        quantity: quantity,
+                                        total: totalAmount,
+                                        type: "Service",
+                                }],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                size: pets.map(pet => pet.size),
+                                pets: pets.map(pet => pet._id),
+                        };
+
+                        if (findCart) {
+                                findCart.addOnServices.push(obj.addOnServices[0]);
+                                findCart.totalAmount += obj.totalAmount;
+                                findCart.paidAmount += obj.totalAmount;
+                                findCart.totalItem++;
+                                await findCart.save();
+                                return res.status(200).json({ status: 200, message: "Service quantity updated in the cart.", data: findCart });
+                        } else {
+                                const Data = await Cart.create(obj);
+                                return res.status(200).json({ status: 200, message: "Service successfully added to the cart.", data: Data });
+                        }
+                }
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
 exports.addToCartPackageNormal1 = async (req, res) => {
         try {
                 const userData = await User.findOne({ _id: req.user._id });
@@ -1633,7 +2011,7 @@ exports.addToCartPackageNormal1 = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-exports.addToCartPackageEssential = async (req, res) => {
+exports.addToCartPackageEssential1 = async (req, res) => {
         try {
                 const userId = req.user._id;
                 const userData = await User.findOne({ _id: userId });
@@ -1651,6 +2029,399 @@ exports.addToCartPackageEssential = async (req, res) => {
                 }
                 console.log(findPet);
 
+                const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
+
+                if (!findPackage || !findPackage.packageType) {
+                        return res.status(404).json({ status: 404, message: "Package not found or package type missing." });
+                }
+
+                let originalPrice = 0;
+                let discountActive = false;
+                let discountPrice = 0;
+                const month = req.body.month;
+
+                let walksPerDay = 0;
+                let daysPerWeek = 0;
+                let timeSlots = [];
+
+
+                if (findPackage.variations && findPackage.variations.length > 0) {
+                        let variation;
+                        // const variation = findPackage.variations[0];
+                        const reqWalksPerDay = req.body.walksPerDay || 0;
+                        const reqDaysPerWeek = req.body.daysPerWeek || 0;
+
+                        if (req.body.walksPerDay || req.body.daysPerWeek) {
+                                variation = findPackage.variations.find(v => {
+                                        return v.size.toString() === findPet.size.toString() &&
+                                                (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
+                                                (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
+                                });
+                        } else {
+                                variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
+                        }
+                        console.log("findPackage.variations", findPackage.variations);
+                        console.log("findPet.size", findPet.size);
+                        console.log("variation", variation);
+
+                        if (!variation) {
+                                return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
+                        }
+
+                        if (req.body.walksPerDay) {
+                                walksPerDay = variation.walksPerDay !== undefined ? variation.walksPerDay : reqWalksPerDay;
+                                daysPerWeek = variation.daysPerWeek !== undefined ? variation.daysPerWeek : reqDaysPerWeek;
+                                timeSlots = req.body.timeSlots || [];
+                        }
+
+                        if (month) {
+                                switch (month) {
+                                        case 'oneTime':
+                                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                discountActive = variation.oneTimediscountActive || false;
+                                                discountPrice = variation.oneTimediscountPrice || 0;
+                                                break;
+                                        case 'monthly':
+                                                originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                discountActive = variation.MonthlydiscountActive || false;
+                                                discountPrice = variation.MonthlydiscountPrice || 0;
+                                                break;
+                                        case 'threeMonth':
+                                                originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                discountActive = variation.threeMonthdiscountActive || false;
+                                                discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                break;
+                                        case 'sixMonth':
+                                                originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                discountActive = variation.sixMonthdiscountActive || false;
+                                                discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                break;
+                                        case 'twelveMonth':
+                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                discountActive = variation.twelveMonthdiscountActive || false;
+                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                break;
+                                        default:
+                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                }
+                        } else {
+                                originalPrice = variation.oneTimeoriginalPrice || 0;
+                                discountActive = variation.oneTimediscountActive || false;
+                                discountPrice = variation.oneTimediscountPrice || 0;
+                        }
+                }
+
+                if (discountActive && originalPrice > 0 && discountPrice > 0) {
+                        discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                }
+
+                let price = discountActive ? discountPrice : originalPrice;
+                let quantity = req.body.quantity;
+
+                if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                        return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                }
+
+                let Charged = [];
+                let additionalFee = 0;
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                let totalAmount = price * quantity;
+                let paidAmount = totalAmount + additionalFee;
+
+                const newPackage = {
+                        packageId: findPackage._id,
+                        packageType: findPackage.packageType,
+                        services: findPackage.services.map(service => ({
+                                serviceId: service.service._id,
+                                serviceType: service.service.serviceTypes,
+                                selectedCount: service.selectedCount,
+                                selected: service.selected,
+                        })),
+                        price: price,
+                        quantity: quantity,
+                        total: totalAmount,
+                };
+
+                if (!findCart) {
+                        const obj = {
+                                userId: userId,
+                                Charges: findCharge,
+                                packages: [newPackage],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                size: findPet.size,
+                                pets: findPet._id,
+                                walksPerDay: walksPerDay || 0,
+                                daysPerWeek: daysPerWeek || 0,
+                                timeSlots: timeSlots || [],
+                        };
+
+                        findCart = await Cart.create(obj);
+                } else {
+                        const existingPackageIndex = findCart.packages.findIndex(pkg => pkg.packageId.equals(newPackage.packageId));
+                        if (existingPackageIndex !== -1) {
+                                findCart.packages[existingPackageIndex].quantity += quantity;
+                                findCart.packages[existingPackageIndex].total += totalAmount;
+                        } else {
+                                findCart.packages.push(newPackage);
+                        }
+
+                        findCart.totalAmount += totalAmount;
+                        findCart.paidAmount += totalAmount;
+                        findCart.totalItem += 1;
+
+                        await findCart.save();
+                }
+
+                return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
+exports.addToCartPackageEssential = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                }
+                let findCart = await Cart.findOne({ userId });
+                const packageId = req.body.packageId;
+
+                let pets = [];
+                if (req.body.pets && req.body.pets.length > 0) {
+                        pets = await Pet.find({ _id: { $in: req.body.pets } }).populate('breed');
+                } else {
+                        pets = await Pet.find({ user: userData._id }).populate('breed');
+                }
+
+                if (!pets || pets.length === 0) {
+                        return res.status(404).json({ status: 404, message: "No pets found for the user." });
+                }
+
+                const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
+
+                if (!findPackage || !findPackage.packageType) {
+                        return res.status(404).json({ status: 404, message: "Package not found or package type missing." });
+                }
+
+                let totalOriginalPrice = 0;
+                let totalDiscountPrice = 0;
+                let discountActive = false;
+                const month = req.body.month;
+
+                let walksPerDay = req.body.walksPerDay || 0;
+                let daysPerWeek = req.body.daysPerWeek || 0;
+                let timeSlots = req.body.timeSlots || [];
+
+                const reqWalksPerDay = req.body.walksPerDay || 0;
+                const reqDaysPerWeek = req.body.daysPerWeek || 0;
+
+                for (const pet of pets) {
+                        if (findPackage.variations && findPackage.variations.length > 0) {
+                                let variation = findPackage.variations.find(v => {
+                                        return v.size.toString() === pet.size.toString() &&
+                                                (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
+                                                (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
+                                });
+
+                                if (!variation) {
+                                        return res.status(400).json({ status: 400, message: `No matching variation for pet size: ${pet.size}` });
+                                }
+
+                                let originalPrice = 0;
+                                let discountPrice = 0;
+
+                                if (month) {
+                                        switch (month) {
+                                                case 'oneTime':
+                                                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                        discountActive = variation.oneTimediscountActive || false;
+                                                        discountPrice = variation.oneTimediscountPrice || 0;
+                                                        break;
+                                                case 'monthly':
+                                                        originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                        discountActive = variation.MonthlydiscountActive || false;
+                                                        discountPrice = variation.MonthlydiscountPrice || 0;
+                                                        break;
+                                                case 'threeMonth':
+                                                        originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                        discountActive = variation.threeMonthdiscountActive || false;
+                                                        discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                        break;
+                                                case 'sixMonth':
+                                                        originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                        discountActive = variation.sixMonthdiscountActive || false;
+                                                        discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                        break;
+                                                case 'twelveMonth':
+                                                        originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                        discountActive = variation.twelveMonthdiscountActive || false;
+                                                        discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                        break;
+                                                default:
+                                                        return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                        }
+                                } else {
+                                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                                        discountActive = variation.oneTimediscountActive || false;
+                                        discountPrice = variation.oneTimediscountPrice || 0;
+                                }
+
+                                totalOriginalPrice += originalPrice;
+                                if (discountActive) {
+                                        totalDiscountPrice += discountPrice;
+                                } else {
+                                        totalDiscountPrice += originalPrice;
+                                }
+                        }
+                }
+
+                let discount = 0;
+                if (discountActive && totalOriginalPrice > 0 && totalDiscountPrice > 0) {
+                        discount = ((totalOriginalPrice - totalDiscountPrice) / totalOriginalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                }
+
+                let price = totalDiscountPrice || totalOriginalPrice;
+                let quantity = req.body.quantity || 1;
+
+                if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                        return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                }
+
+                let Charged = [];
+                let additionalFee = 0;
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                let totalAmount = price * quantity;
+                let paidAmount = totalAmount + additionalFee;
+
+                const newPackage = {
+                        packageId: findPackage._id,
+                        packageType: findPackage.packageType,
+                        services: findPackage.services.map(service => ({
+                                serviceId: service.service._id,
+                                serviceType: service.service.serviceTypes,
+                                selectedCount: service.selectedCount,
+                                selected: service.selected,
+                        })),
+                        price: price,
+                        quantity: quantity,
+                        total: totalAmount,
+                };
+
+                if (!findCart) {
+                        const obj = {
+                                userId: userId,
+                                Charges: findCharge,
+                                packages: [newPackage],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                size: pets.map(pet => pet.size),
+                                pets: pets.map(pet => pet._id),
+                                walksPerDay: walksPerDay,
+                                daysPerWeek: daysPerWeek,
+                                timeSlots: timeSlots,
+                        };
+
+                        findCart = await Cart.create(obj);
+                } else {
+                        const existingPackageIndex = findCart.packages.findIndex(pkg => pkg.packageId.equals(newPackage.packageId));
+                        if (existingPackageIndex !== -1) {
+                                findCart.packages[existingPackageIndex].quantity += quantity;
+                                findCart.packages[existingPackageIndex].total += totalAmount;
+                        } else {
+                                findCart.packages.push(newPackage);
+                        }
+
+                        pets.forEach(pet => {
+                                if (!findCart.size.some(size => size.equals(pet.size))) {
+                                        findCart.size.push(pet.size);
+                                }
+                                if (!findCart.pets.some(existingPet => existingPet.equals(pet._id))) {
+                                        findCart.pets.push(pet._id);
+                                }
+                        });
+
+                        findCart.totalAmount += totalAmount;
+                        findCart.paidAmount += totalAmount;
+                        findCart.totalItem += 1;
+
+                        await findCart.save();
+                }
+
+                return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
+exports.addToCartPackageStandard1 = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                }
+                let findCart = await Cart.findOne({ userId });
+                const packageId = req.body.packageId;
+
+                let findPet;
+                if (req.body.pets) {
+                        findPet = await Pet.findOne({ _id: req.body.pets }).populate('breed');
+                } else {
+                        findPet = await Pet.findOne({ user: userData._id }).populate('breed');
+                }
                 const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage || !findPackage.packageType) {
@@ -1836,102 +2607,104 @@ exports.addToCartPackageStandard = async (req, res) => {
                 let findCart = await Cart.findOne({ userId });
                 const packageId = req.body.packageId;
 
-                let findPet;
-                if (req.body.pets) {
-                        findPet = await Pet.findOne({ _id: req.body.pets }).populate('breed');
+                let pets = [];
+                if (req.body.pets && req.body.pets.length > 0) {
+                        pets = await Pet.find({ _id: { $in: req.body.pets } }).populate('breed');
                 } else {
-                        findPet = await Pet.findOne({ user: userData._id }).populate('breed');
+                        pets = await Pet.find({ user: userData._id }).populate('breed');
                 }
+
+                if (!pets || pets.length === 0) {
+                        return res.status(404).json({ status: 404, message: "No pets found for the user." });
+                }
+
                 const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
 
                 if (!findPackage || !findPackage.packageType) {
                         return res.status(404).json({ status: 404, message: "Package not found or package type missing." });
                 }
 
-                let originalPrice = 0;
+                let totalOriginalPrice = 0;
+                let totalDiscountPrice = 0;
                 let discountActive = false;
-                let discountPrice = 0;
                 const month = req.body.month;
 
-                let walksPerDay = 0;
-                let daysPerWeek = 0;
-                let timeSlots = [];
+                let walksPerDay = req.body.walksPerDay || 0;
+                let daysPerWeek = req.body.daysPerWeek || 0;
+                let timeSlots = req.body.timeSlots || [];
 
+                const reqWalksPerDay = req.body.walksPerDay || 0;
+                const reqDaysPerWeek = req.body.daysPerWeek || 0;
 
-                if (findPackage.variations && findPackage.variations.length > 0) {
-                        let variation;
-                        // const variation = findPackage.variations[0];
-                        const reqWalksPerDay = req.body.walksPerDay || 0;
-                        const reqDaysPerWeek = req.body.daysPerWeek || 0;
-
-                        if (req.body.walksPerDay || req.body.daysPerWeek) {
-                                variation = findPackage.variations.find(v => {
-                                        return v.size.toString() === findPet.size.toString() &&
+                for (const pet of pets) {
+                        if (findPackage.variations && findPackage.variations.length > 0) {
+                                let variation = findPackage.variations.find(v => {
+                                        return v.size.toString() === pet.size.toString() &&
                                                 (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
                                                 (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
                                 });
-                        } else {
-                                variation = findPackage.variations.find(v => v.size.toString() === findPet.size.toString());
-                        }
-                        console.log("findPackage.variations", findPackage.variations);
-                        console.log("findPet.size", findPet.size);
-                        console.log("variation", variation);
 
-                        if (!variation) {
-                                return res.status(400).json({ status: 400, message: "No matching variation for the pet's size" });
-                        }
-
-                        if (req.body.walksPerDay) {
-                                walksPerDay = variation.walksPerDay !== undefined ? variation.walksPerDay : reqWalksPerDay;
-                                daysPerWeek = variation.daysPerWeek !== undefined ? variation.daysPerWeek : reqDaysPerWeek;
-                                timeSlots = req.body.timeSlots || [];
-                        }
-
-                        if (month) {
-                                switch (month) {
-                                        case 'oneTime':
-                                                originalPrice = variation.oneTimeoriginalPrice || 0;
-                                                discountActive = variation.oneTimediscountActive || false;
-                                                discountPrice = variation.oneTimediscountPrice || 0;
-                                                break;
-                                        case 'monthly':
-                                                originalPrice = variation.MonthlyoriginalPrice || 0;
-                                                discountActive = variation.MonthlydiscountActive || false;
-                                                discountPrice = variation.MonthlydiscountPrice || 0;
-                                                break;
-                                        case 'threeMonth':
-                                                originalPrice = variation.threeMonthoriginalPrice || 0;
-                                                discountActive = variation.threeMonthdiscountActive || false;
-                                                discountPrice = variation.threeMonthdiscountPrice || 0;
-                                                break;
-                                        case 'sixMonth':
-                                                originalPrice = variation.sixMonthoriginalPrice || 0;
-                                                discountActive = variation.sixMonthdiscountActive || false;
-                                                discountPrice = variation.sixMonthdiscountPrice || 0;
-                                                break;
-                                        case 'twelveMonth':
-                                                originalPrice = variation.twelveMonthoriginalPrice || 0;
-                                                discountActive = variation.twelveMonthdiscountActive || false;
-                                                discountPrice = variation.twelveMonthdiscountPrice || 0;
-                                                break;
-                                        default:
-                                                return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                if (!variation) {
+                                        return res.status(400).json({ status: 400, message: `No matching variation for pet size: ${pet.size}` });
                                 }
-                        } else {
-                                originalPrice = variation.oneTimeoriginalPrice || 0;
-                                discountActive = variation.oneTimediscountActive || false;
-                                discountPrice = variation.oneTimediscountPrice || 0;
+
+                                let originalPrice = 0;
+                                let discountPrice = 0;
+
+                                if (month) {
+                                        switch (month) {
+                                                case 'oneTime':
+                                                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                        discountActive = variation.oneTimediscountActive || false;
+                                                        discountPrice = variation.oneTimediscountPrice || 0;
+                                                        break;
+                                                case 'monthly':
+                                                        originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                        discountActive = variation.MonthlydiscountActive || false;
+                                                        discountPrice = variation.MonthlydiscountPrice || 0;
+                                                        break;
+                                                case 'threeMonth':
+                                                        originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                        discountActive = variation.threeMonthdiscountActive || false;
+                                                        discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                        break;
+                                                case 'sixMonth':
+                                                        originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                        discountActive = variation.sixMonthdiscountActive || false;
+                                                        discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                        break;
+                                                case 'twelveMonth':
+                                                        originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                        discountActive = variation.twelveMonthdiscountActive || false;
+                                                        discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                        break;
+                                                default:
+                                                        return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                        }
+                                } else {
+                                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                                        discountActive = variation.oneTimediscountActive || false;
+                                        discountPrice = variation.oneTimediscountPrice || 0;
+                                }
+
+                                totalOriginalPrice += originalPrice;
+                                if (discountActive) {
+                                        totalDiscountPrice += discountPrice;
+                                } else {
+                                        totalDiscountPrice += originalPrice;
+                                }
                         }
                 }
 
-                if (discountActive && originalPrice > 0 && discountPrice > 0) {
-                        discount = ((originalPrice - discountPrice) / originalPrice) * 100;
+                let discount = 0;
+                if (discountActive && totalOriginalPrice > 0 && totalDiscountPrice > 0) {
+                        discount = ((totalOriginalPrice - totalDiscountPrice) / totalOriginalPrice) * 100;
                         discount = Math.max(discount, 0);
                         discount = Math.round(discount);
                 }
 
-                let price = discountActive ? discountPrice : originalPrice;
-                let quantity = req.body.quantity;
+                let price = totalDiscountPrice || totalOriginalPrice;
+                let quantity = req.body.quantity || 1;
 
                 if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
                         return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
@@ -1987,11 +2760,11 @@ exports.addToCartPackageStandard = async (req, res) => {
                                 additionalFee: additionalFee,
                                 paidAmount: paidAmount,
                                 totalItem: 1,
-                                size: findPet.size,
-                                pets: findPet._id,
-                                walksPerDay: walksPerDay || 0,
-                                daysPerWeek: daysPerWeek || 0,
-                                timeSlots: timeSlots || [],
+                                size: pets.map(pet => pet.size),
+                                pets: pets.map(pet => pet._id),
+                                walksPerDay: walksPerDay,
+                                daysPerWeek: daysPerWeek,
+                                timeSlots: timeSlots,
                         };
 
                         findCart = await Cart.create(obj);
@@ -2003,6 +2776,16 @@ exports.addToCartPackageStandard = async (req, res) => {
                         } else {
                                 findCart.packages.push(newPackage);
                         }
+
+                        // Update sizes and pets
+                        pets.forEach(pet => {
+                                if (!findCart.size.some(size => size.equals(pet.size))) {
+                                        findCart.size.push(pet.size);
+                                }
+                                if (!findCart.pets.some(existingPet => existingPet.equals(pet._id))) {
+                                        findCart.pets.push(pet._id);
+                                }
+                        });
 
                         findCart.totalAmount += totalAmount;
                         findCart.paidAmount += totalAmount;
@@ -2017,7 +2800,7 @@ exports.addToCartPackageStandard = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-exports.addToCartPackagePro = async (req, res) => {
+exports.addToCartPackagePro1 = async (req, res) => {
         try {
                 const userId = req.user._id;
                 const userData = await User.findOne({ _id: userId });
@@ -2195,6 +2978,209 @@ exports.addToCartPackagePro = async (req, res) => {
                         } else {
                                 findCart.packages.push(newPackage);
                         }
+
+                        findCart.totalAmount += totalAmount;
+                        findCart.paidAmount += totalAmount;
+                        findCart.totalItem += 1;
+
+                        await findCart.save();
+                }
+
+                return res.status(200).json({ status: 200, message: "Package added to the cart.", data: findCart });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
+        }
+};
+exports.addToCartPackagePro = async (req, res) => {
+        try {
+                const userId = req.user._id;
+                const userData = await User.findOne({ _id: userId });
+                if (!userData) {
+                        return res.status(400).json({ status: 400, message: "Please select a location before adding services to the cart." });
+                }
+                let findCart = await Cart.findOne({ userId });
+                const packageId = req.body.packageId;
+
+                let pets = [];
+                if (req.body.pets && req.body.pets.length > 0) {
+                        pets = await Pet.find({ _id: { $in: req.body.pets } }).populate('breed');
+                } else {
+                        pets = await Pet.find({ user: userData._id }).populate('breed');
+                }
+
+                if (!pets || pets.length === 0) {
+                        return res.status(404).json({ status: 404, message: "No pets found for the user." });
+                }
+
+                const findPackage = packageId ? await Package.findOne({ _id: packageId }).populate('services.service').populate('addOnServices.service') : null;
+
+                if (!findPackage || !findPackage.packageType) {
+                        return res.status(404).json({ status: 404, message: "Package not found or package type missing." });
+                }
+
+                let totalOriginalPrice = 0;
+                let totalDiscountPrice = 0;
+                let discountActive = false;
+                const month = req.body.month;
+
+                let walksPerDay = req.body.walksPerDay || 0;
+                let daysPerWeek = req.body.daysPerWeek || 0;
+                let timeSlots = req.body.timeSlots || [];
+
+                const reqWalksPerDay = req.body.walksPerDay || 0;
+                const reqDaysPerWeek = req.body.daysPerWeek || 0;
+
+                for (const pet of pets) {
+                        if (findPackage.variations && findPackage.variations.length > 0) {
+                                let variation = findPackage.variations.find(v => {
+                                        return v.size.toString() === pet.size.toString() &&
+                                                (!req.body.walksPerDay || v.walksPerDay === reqWalksPerDay) &&
+                                                (!req.body.daysPerWeek || v.daysPerWeek === reqDaysPerWeek);
+                                });
+
+                                if (!variation) {
+                                        return res.status(400).json({ status: 400, message: `No matching variation for pet size: ${pet.size}` });
+                                }
+
+                                let originalPrice = 0;
+                                let discountPrice = 0;
+
+                                if (month) {
+                                        switch (month) {
+                                                case 'oneTime':
+                                                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                                                        discountActive = variation.oneTimediscountActive || false;
+                                                        discountPrice = variation.oneTimediscountPrice || 0;
+                                                        break;
+                                                case 'monthly':
+                                                        originalPrice = variation.MonthlyoriginalPrice || 0;
+                                                        discountActive = variation.MonthlydiscountActive || false;
+                                                        discountPrice = variation.MonthlydiscountPrice || 0;
+                                                        break;
+                                                case 'threeMonth':
+                                                        originalPrice = variation.threeMonthoriginalPrice || 0;
+                                                        discountActive = variation.threeMonthdiscountActive || false;
+                                                        discountPrice = variation.threeMonthdiscountPrice || 0;
+                                                        break;
+                                                case 'sixMonth':
+                                                        originalPrice = variation.sixMonthoriginalPrice || 0;
+                                                        discountActive = variation.sixMonthdiscountActive || false;
+                                                        discountPrice = variation.sixMonthdiscountPrice || 0;
+                                                        break;
+                                                case 'twelveMonth':
+                                                        originalPrice = variation.twelveMonthoriginalPrice || 0;
+                                                        discountActive = variation.twelveMonthdiscountActive || false;
+                                                        discountPrice = variation.twelveMonthdiscountPrice || 0;
+                                                        break;
+                                                default:
+                                                        return res.status(400).json({ status: 400, message: "Invalid month value" });
+                                        }
+                                } else {
+                                        originalPrice = variation.oneTimeoriginalPrice || 0;
+                                        discountActive = variation.oneTimediscountActive || false;
+                                        discountPrice = variation.oneTimediscountPrice || 0;
+                                }
+
+                                totalOriginalPrice += originalPrice;
+                                if (discountActive) {
+                                        totalDiscountPrice += discountPrice;
+                                } else {
+                                        totalDiscountPrice += originalPrice;
+                                }
+                        }
+                }
+
+                let discount = 0;
+                if (discountActive && totalOriginalPrice > 0 && totalDiscountPrice > 0) {
+                        discount = ((totalOriginalPrice - totalDiscountPrice) / totalOriginalPrice) * 100;
+                        discount = Math.max(discount, 0);
+                        discount = Math.round(discount);
+                }
+
+                let price = totalDiscountPrice || totalOriginalPrice;
+                let quantity = req.body.quantity || 1;
+
+                if (isNaN(price) || isNaN(quantity) || quantity <= 0) {
+                        return res.status(400).json({ status: 400, message: "Invalid price or quantity values." });
+                }
+
+                let Charged = [];
+                let additionalFee = 0;
+                const findCharge = await Charges.find({});
+
+                if (findCharge.length > 0) {
+                        for (let i = 0; i < findCharge.length; i++) {
+                                let obj1 = {
+                                        chargeId: findCharge[i]._id,
+                                        charge: findCharge[i].charge,
+                                        discountCharge: findCharge[i].discountCharge,
+                                        discount: findCharge[i].discount,
+                                        cancelation: findCharge[i].cancelation,
+                                };
+                                if (findCharge[i].cancelation == false) {
+                                        if (findCharge[i].discount == true) {
+                                                additionalFee = additionalFee + findCharge[i].discountCharge;
+                                        } else {
+                                                additionalFee = additionalFee + findCharge[i].charge;
+                                        }
+                                }
+                                Charged.push(obj1);
+                        }
+                }
+
+                let totalAmount = price * quantity;
+                let paidAmount = totalAmount + additionalFee;
+
+                const newPackage = {
+                        packageId: findPackage._id,
+                        packageType: findPackage.packageType,
+                        services: findPackage.services.map(service => ({
+                                serviceId: service.service._id,
+                                serviceType: service.service.serviceTypes,
+                                selectedCount: service.selectedCount,
+                                selected: service.selected,
+                        })),
+                        price: price,
+                        quantity: quantity,
+                        total: totalAmount,
+                };
+
+                if (!findCart) {
+                        const obj = {
+                                userId: userId,
+                                Charges: findCharge,
+                                packages: [newPackage],
+                                totalAmount: totalAmount,
+                                additionalFee: additionalFee,
+                                paidAmount: paidAmount,
+                                totalItem: 1,
+                                size: pets.map(pet => pet.size),
+                                pets: pets.map(pet => pet._id),
+                                walksPerDay: walksPerDay,
+                                daysPerWeek: daysPerWeek,
+                                timeSlots: timeSlots,
+                        };
+
+                        findCart = await Cart.create(obj);
+                } else {
+                        const existingPackageIndex = findCart.packages.findIndex(pkg => pkg.packageId.equals(newPackage.packageId));
+                        if (existingPackageIndex !== -1) {
+                                findCart.packages[existingPackageIndex].quantity += quantity;
+                                findCart.packages[existingPackageIndex].total += totalAmount;
+                        } else {
+                                findCart.packages.push(newPackage);
+                        }
+
+                        // Update sizes and pets
+                        pets.forEach(pet => {
+                                if (!findCart.size.some(size => size.equals(pet.size))) {
+                                        findCart.size.push(pet.size);
+                                }
+                                if (!findCart.pets.some(existingPet => existingPet.equals(pet._id))) {
+                                        findCart.pets.push(pet._id);
+                                }
+                        });
 
                         findCart.totalAmount += totalAmount;
                         findCart.paidAmount += totalAmount;
@@ -2575,7 +3561,7 @@ exports.updateServiceQuantity1 = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-exports.updateServiceQuantity3 = async (req, res) => {
+exports.updateServiceQuantity2 = async (req, res) => {
         try {
                 const { Services, packageServices, AddOnServices, quantity } = req.body;
 
@@ -2635,7 +3621,7 @@ exports.updateServiceQuantity3 = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-exports.updateServiceQuantity = async (req, res) => {
+exports.updateServiceQuantity3 = async (req, res) => {
         try {
                 const { Services, packageServices, AddOnServices, quantity } = req.body;
 
@@ -2718,7 +3704,92 @@ exports.updateServiceQuantity = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error: " + error.message });
         }
 };
-exports.updatePackageQuantity = async (req, res) => {
+exports.updateServiceQuantity = async (req, res) => {
+        try {
+                const { serviceId, quantity, type } = req.body;
+
+                if (quantity <= 0 || isNaN(quantity)) {
+                        return res.status(400).json({ status: 400, message: "Quantity must be a positive number greater than zero." });
+                }
+
+                const userData = await User.findOne({ _id: req.user._id });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                const findCart = await Cart.findOne({ userId: userData._id });
+                if (!findCart) {
+                        return res.status(404).send({ status: 404, message: "Cart not found" });
+                }
+
+                let updatedService;
+
+                switch (type) {
+                        case 'service':
+                                updatedService = findCart.services.find(service => service.serviceId.equals(serviceId));
+                                if (updatedService) {
+                                        updatedService.quantity = quantity;
+                                        updatedService.total = updatedService.price * quantity;
+                                }
+                                break;
+                        case 'package':
+                                for (const pkg of findCart.packages) {
+                                        updatedService = pkg.services.find(service => service.serviceId.equals(serviceId));
+                                        if (updatedService) {
+                                                updatedService.quantity = quantity;
+                                                updatedService.total = updatedService.price * quantity;
+                                                break;
+                                        }
+                                }
+                                break;
+                        case 'addon':
+                                updatedService = findCart.addOnServices.find(service => service.serviceId.equals(serviceId));
+                                if (updatedService) {
+                                        updatedService.quantity = quantity;
+                                        updatedService.total = updatedService.price * quantity;
+                                }
+                                break;
+                        default:
+                                return res.status(400).json({ status: 400, message: "Invalid service type" });
+                }
+
+                if (!updatedService) {
+                        return res.status(404).send({ status: 404, message: "Service not found in the cart" });
+                }
+
+                findCart.totalAmount = calculateTotalAmount21(findCart);
+
+                findCart.paidAmount = findCart.totalAmount + findCart.additionalFee;
+
+                await findCart.save();
+
+                return res.status(200).json({
+                        status: 200,
+                        message: "Service quantity updated in the cart.",
+                        data: {
+                                cart: findCart,
+                                updatedService,
+                        },
+                });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error: " + error.message });
+        }
+};
+function calculateTotalAmount21(cart) {
+        let total = 0;
+
+        total += cart.services.reduce((sum, service) => sum + (service.price * service.quantity), 0);
+
+        total += cart.packages.reduce((sum, pkg) => {
+                return sum + pkg.services.reduce((pkgSum, service) => pkgSum + (service.price * service.quantity), 0);
+        }, 0);
+
+        total += cart.addOnServices.reduce((sum, service) => sum + (service.price * service.quantity), 0);
+
+        return total;
+}
+exports.updatePackageQuantity1 = async (req, res) => {
         try {
                 const { packageId, quantity } = req.body;
 
@@ -2756,52 +3827,108 @@ exports.updatePackageQuantity = async (req, res) => {
                 return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
-function calculateTotalAmount21(cart) {
-        let total = 0;
+exports.updatePackageQuantity = async (req, res) => {
+        try {
+                const { packageId, quantity } = req.body;
 
-        if (cart.services && cart.services.length > 0) {
-                cart.services.forEach((service) => {
-                        const serviceTotal = parseFloat(service.total);
-                        console.log("serviceTotal", serviceTotal);
-                        if (!isNaN(serviceTotal)) {
-                                total += serviceTotal;
-                        } else {
-                                console.warn(`Invalid total value for service: ${service}`);
-                        }
-                });
+                const userData = await User.findOne({ _id: req.user._id });
+                if (!userData) {
+                        return res.status(404).send({ status: 404, message: "User not found" });
+                }
+
+                const findCart = await Cart.findOne({ userId: userData._id });
+                if (!findCart) {
+                        return res.status(404).send({ status: 404, message: "Cart not found" });
+                }
+
+                const packageIndex = findCart.packages.findIndex((pkg) => pkg.packageId.equals(packageId));
+
+                if (packageIndex !== -1) {
+                        const existingPackage = findCart.packages[packageIndex];
+                        const oldQuantity = existingPackage.quantity;
+
+                        existingPackage.quantity = quantity;
+                        existingPackage.total = existingPackage.price * quantity;
+
+                        findCart.totalAmount = findCart.packages.reduce((total, pkg) => total + pkg.total, 0);
+                        findCart.totalAmount += calculateServices2Total(findCart.services);
+
+                        const quantityDifference = quantity - oldQuantity;
+                        findCart.paidAmount += existingPackage.price * quantityDifference;
+
+                        findCart.paidAmount = Math.max(0, findCart.paidAmount);
+
+                        await updatePetsAndSize(findCart);
+
+                        console.log("paidAmount*****", findCart.paidAmount);
+
+                        await findCart.save();
+
+                        return res.status(200).json({ status: 200, message: "Package quantity updated in the cart.", data: findCart });
+                } else {
+                        return res.status(404).send({ status: 404, message: "Package not found in the cart" });
+                }
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
+};
+async function updatePetsAndSize(cart) {
+        const petIds = cart.packages.flatMap(pkg => pkg.pets || []);
+        const pets = await Pet.find({ _id: { $in: petIds } });
 
-        if (cart.packages && cart.packages.length > 0) {
-                cart.packages.forEach((pkg) => {
-                        if (pkg.services && pkg.services.length > 0) {
-                                pkg.services.reduce((service) => {
-                                        const serviceTotal = parseFloat(service.total);
-                                        console.log("serviceTotal", serviceTotal);
-                                        if (!isNaN(serviceTotal)) {
-                                                total += serviceTotal;
-                                        } else {
-                                                console.warn(`Invalid total value for service: ${service}`);
-                                        }
-                                });
-                        }
-                });
-        }
+        cart.size = [...new Set(pets.map(pet => pet.size.toString()))];
 
-        if (cart.addOnServices && cart.addOnServices.length > 0) {
-                total += cart.addOnServices.reduce((acc, service) => {
-                        const serviceTotal = parseFloat(service.total);
-                        if (!isNaN(serviceTotal)) {
-                                return acc + serviceTotal;
-                        } else {
-                                console.warn(`Invalid total value for add-on service: ${service}`);
-                                return acc;
-                        }
-                }, 0);
-        }
+        cart.pets = [...new Set(petIds.map(id => id.toString()))];
 
-        console.warn(`Total calculated:`, total);
-        return total;
+        cart.totalItem = cart.packages.reduce((total, pkg) => total + pkg.quantity, 0);
 }
+// function calculateTotalAmount21(cart) {
+//         let total = 0;
+
+//         if (cart.services && cart.services.length > 0) {
+//                 cart.services.forEach((service) => {
+//                         const serviceTotal = parseFloat(service.total);
+//                         console.log("serviceTotal", serviceTotal);
+//                         if (!isNaN(serviceTotal)) {
+//                                 total += serviceTotal;
+//                         } else {
+//                                 console.warn(`Invalid total value for service: ${service}`);
+//                         }
+//                 });
+//         }
+
+//         if (cart.packages && cart.packages.length > 0) {
+//                 cart.packages.forEach((pkg) => {
+//                         if (pkg.services && pkg.services.length > 0) {
+//                                 pkg.services.reduce((service) => {
+//                                         const serviceTotal = parseFloat(service.total);
+//                                         console.log("serviceTotal", serviceTotal);
+//                                         if (!isNaN(serviceTotal)) {
+//                                                 total += serviceTotal;
+//                                         } else {
+//                                                 console.warn(`Invalid total value for service: ${service}`);
+//                                         }
+//                                 });
+//                         }
+//                 });
+//         }
+
+//         if (cart.addOnServices && cart.addOnServices.length > 0) {
+//                 total += cart.addOnServices.reduce((acc, service) => {
+//                         const serviceTotal = parseFloat(service.total);
+//                         if (!isNaN(serviceTotal)) {
+//                                 return acc + serviceTotal;
+//                         } else {
+//                                 console.warn(`Invalid total value for add-on service: ${service}`);
+//                                 return acc;
+//                         }
+//                 }, 0);
+//         }
+
+//         console.warn(`Total calculated:`, total);
+//         return total;
+// }
 exports.provideTip = async (req, res) => {
         try {
                 let userData = await User.findOne({ _id: req.user._id });

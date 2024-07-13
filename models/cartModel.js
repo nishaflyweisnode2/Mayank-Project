@@ -211,14 +211,14 @@ const CartSchema = new Schema({
         timeSlots: [{
                 type: String,
         }],
-        size: {
+        size: [{
                 type: Schema.Types.ObjectId,
                 ref: 'Size',
-        },
-        pets: {
+        }],
+        pets: [{
                 type: Schema.Types.ObjectId,
                 ref: 'Pets',
-        },
+        }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('cart', CartSchema);
