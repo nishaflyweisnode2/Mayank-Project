@@ -213,7 +213,7 @@ exports.verifyOtp = async (req, res) => {
 };
 exports.getProfile = async (req, res) => {
         try {
-                const data = await User.findOne({ _id: req.user._id, }).select('fullName email phone gender alternatePhone dob address1 address2 image refferalCode completeProfile city sector isCity isSector').populate('city sector');
+                const data = await User.findOne({ _id: req.user._id, }).populate('currentRole occupation role');
                 if (data) {
                         return res.status(200).json({ status: 200, message: "get Profile", data: data });
                 } else {
