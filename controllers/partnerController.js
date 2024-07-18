@@ -992,27 +992,27 @@ exports.getCurrentRole = async (req, res) => {
 };
 exports.getIdCard = async (req, res) => {
         try {
-                const data = await User.findOne({ _id: req.user._id }).populate('currentRole occupation role');
+                const data = await User.findOne({ _id: req.user._id }).populate('city sector currentRole occupation role');
                 if (!data) {
                         return res.status(404).json({ status: 404, message: "No data found", data: {} });
                 }
                 const userData = data.toJSON();
 
-                const qrCodeData = JSON.stringify(userData);
+                // const qrCodeData = JSON.stringify(userData);
 
-                const qrCodePath = `qr_codes/user_${data._id}.png`;
-                await qr.toFile(qrCodePath, qrCodeData);
-                console.log("qrCodePath", qrCodePath);
-                const cloudinaryUploadResponse = await cloudinary.uploader.upload(qrCodePath, {
-                        folder: 'QrCode',
-                        resource_type: 'raw'
-                });
+                // const qrCodePath = `qr_codes/user_${data._id}.png`;
+                // await qr.toFile(qrCodePath, qrCodeData);
+                // console.log("qrCodePath", qrCodePath);
+                // const cloudinaryUploadResponse = await cloudinary.uploader.upload(qrCodePath, {
+                //         folder: 'QrCode',
+                //         resource_type: 'raw'
+                // });
 
-                userData.qrCodePath = cloudinaryUploadResponse.secure_url;
+                // userData.qrCodePath = cloudinaryUploadResponse.secure_url;
 
-                await User.findByIdAndUpdate(data._id, { qrCodePath: userData.qrCodePath });
+                // await User.findByIdAndUpdate(data._id, { qrCodePath: userData.qrCodePath });
 
-                fs.unlinkSync(qrCodePath);
+                // fs.unlinkSync(qrCodePath);
 
                 return res.status(200).json({ status: 200, message: "get IdCard", data: userData });
         } catch (error) {
