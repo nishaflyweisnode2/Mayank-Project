@@ -48,6 +48,7 @@ const Size = require('../models/sizeModel');
 const Improve = require('../models/howToImproveModel');
 const CancelationPolicy = require('../models/cancelationPolicyModel');
 const Pet = require('../models/petModel');
+const Notification = require('../models/notificationModel');
 
 
 
@@ -2282,7 +2283,7 @@ exports.getServiceWithoutSubCategoryByPetSizeWise = async (req, res) => {
         const petSizes = userPets.map(pet => pet.size);
         console.log("petSizes", petSizes);
 
-        const sizeId = req.params.sizeId; 
+        const sizeId = req.params.sizeId;
 
         const filterVariationsByPetSize = (variations, sizeId) => {
             const filteredVariations = variations.filter(variation => {

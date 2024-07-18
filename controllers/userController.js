@@ -36,6 +36,7 @@ const Breed = require('../models/breedModel');
 const Attendance = require('../models/attendanceModel');
 const ServiceableAreaRadius = require('../models/serviceableRadiusModel');
 const PackageOrder = require('../models/packageOrderModel');
+const Notification = require('../models/notificationModel');
 
 
 
@@ -1714,10 +1715,10 @@ exports.addToCartAddOnSingleService = async (req, res) => {
 
                 const findCart = await Cart.findOne({ userId: userData._id });
                 const findService = await service.findById({ _id: req.body._id, isAddOnServices: true });
-
-                if (!findService || !findService.isAddOnService) {
+                console.log("findService", findService);
+                if (!findService /*|| !findService.isAddOnService*/) {
                         return res.status(404).json({ status: 404, message: "Add-on service not found." });
-                    }
+                }
 
                 let totalOriginalPrice = 0;
                 let totalDiscountPrice = 0;
@@ -4574,6 +4575,7 @@ exports.checkout = async (req, res) => {
                                         endTime: findCart.endTime,
                                         services: findCart.services,
                                         packages: findCart.packages,
+                                        addOnServices: findCart.addOnServices,
                                         totalAmount: findCart.totalAmount,
                                         additionalFee: findCart.additionalFee,
                                         paidAmount: findCart.paidAmount,

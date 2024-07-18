@@ -24,7 +24,9 @@ module.exports = (app) => {
         app.get('/api/v1/partner/getTodayOrders', [authJwt.verifyToken], auth.getTodayOrders);
         app.get('/api/v1/partner/getTomorrowOrders', [authJwt.verifyToken], auth.getTomorrowOrders);
         app.get('/api/v1/partner/orders/:id', [authJwt.verifyToken], auth.getOrderById);
-        app.get('/api/v1/partner/orders/update-status/:id', [authJwt.verifyToken], auth.updateOrderStatus);
+        app.put('/api/v1/partner/orders/update-status/:id', [authJwt.verifyToken], auth.updateOrderStatus);
+        app.post("/api/v1/partner/orders/trip-end-details/verify/:id", [authJwt.verifyToken], auth.approveTripEndDetailsVerifyOtp);
+        app.post("/api/v1/partner/orders/trip-end-details/resendOtp/:id", [authJwt.verifyToken], auth.approveTripEndDetailsResendOTP);
         app.post('/api/v1/partner/orders/add-service', [authJwt.verifyToken], auth.addServiceToOrder);
         app.post("/api/v1/partner/help/contact", [authJwt.verifyToken], HelpLines.createHelpLine);
         app.get("/api/v1/partner/help/contact", [authJwt.verifyToken], HelpLines.getAllHelpLines);

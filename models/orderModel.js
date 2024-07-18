@@ -237,13 +237,19 @@ const DocumentSchema = Schema({
                 enum: ["Pending", "Paid", "Failed"],
                 default: "Pending"
         },
-        size: {
+        size: [{
                 type: Schema.Types.ObjectId,
                 ref: 'Size',
-        },
-        pets: {
+        }],
+        pets: [{
                 type: Schema.Types.ObjectId,
                 ref: 'Pet',
+        }],
+        endOtp: {
+                type: String,
+        },
+        endTime: {
+                type: String,
         },
 }, { timestamps: true })
 module.exports = mongoose.model("order", DocumentSchema);

@@ -30,6 +30,7 @@ const Team = require('../models/teamModel');
 const ApprovalRequest = require('../models/teamApprovalModel');
 const Pet = require('../models/petModel');
 const Breed = require('../models/breedModel');
+const Notification = require('../models/notificationModel');
 
 
 
@@ -1426,62 +1427,29 @@ exports.getTomorrowOrders = async (req, res) => {
 };
 exports.getAllOrders = async (req, res) => {
         try {
-                const data = await orderModel.find({ partnerId: req.user._id }).populate('userId pets size').populate('packages.packageId')
-                        .populate({
-                                path: 'services.serviceId',
-                                model: 'Service',
-                                populate: {
-                                        path: 'mainCategoryId categoryId subCategoryId',
-                                        model: 'mainCategory'
-                                }
-                        })
-                        .populate({
-                                path: 'services.serviceId',
-                                model: 'Service',
-                                populate: {
-                                        path: 'categoryId',
-                                        model: 'Category'
-                                }
-                        })
-                        .populate({
-                                path: 'services.serviceId',
-                                model: 'Service',
-                                populate: {
-                                        path: 'subCategoryId',
-                                        model: 'subCategory'
-                                }
-                        })
-                        .populate({
+                const data = await orderModel.find({ partnerId: req.user._id })
+                        .populate([{ path: 'pets', populate: { path: 'breed' } },
+                        { path: 'userId partnerId' },
+                        { path: 'size' },
+                        {
                                 path: 'packages.packageId',
                                 model: 'Package',
-                                populate: {
-                                        path: 'mainCategoryId categoryId subCategoryId',
-                                        model: 'mainCategory'
-                                }
-                        })
-                        .populate({
-                                path: 'packages.packageId',
-                                model: 'Package',
-                                populate: {
-                                        path: 'categoryId',
-                                        model: 'Category'
-                                }
-                        })
-                        .populate({
-                                path: 'packages.packageId',
-                                model: 'Package',
-                                populate: {
-                                        path: 'subCategoryId',
-                                        model: 'subCategory'
-                                }
-                        })
-                        .populate({
+                                populate: [{ path: 'mainCategoryId categoryId subCategoryId', model: 'mainCategory' }, { path: 'categoryId', model: 'Category' }, { path: 'subCategoryId', model: 'subCategory' }]
+                        },
+                        {
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: [{ path: 'mainCategoryId categoryId subCategoryId', model: 'mainCategory' }, { path: 'categoryId', model: 'Category' }, { path: 'subCategoryId', model: 'subCategory' }]
+                        },
+                        {
                                 path: 'packages.services',
-                                populate: {
-                                        path: 'serviceId',
-                                        model: 'Service'
-                                }
-                        });
+                                populate: [{ path: 'serviceId', model: 'Service' }]
+                        },
+                        {
+                                path: 'addOnServices.serviceId',
+                                populate: [{ path: 'mainCategoryId categoryId subCategoryId', model: 'mainCategory' }, { path: 'categoryId', model: 'Category' }, { path: 'subCategoryId', model: 'subCategory' }]
+                        }])
+
                 if (data.length > 0) {
                         return res.status(200).json({ message: "All orders", data: data });
                 } else {
@@ -1495,7 +1463,27 @@ exports.getAllOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
         try {
                 const orderId = req.params.id;
-                const order = await orderModel.findById(orderId);
+                const order = await orderModel.findById(orderId).populate([{ path: 'pets', populate: { path: 'breed' } },
+                { path: 'userId partnerId' },
+                { path: 'size' },
+                {
+                        path: 'packages.packageId',
+                        model: 'Package',
+                        populate: [{ path: 'mainCategoryId categoryId subCategoryId', model: 'mainCategory' }, { path: 'categoryId', model: 'Category' }, { path: 'subCategoryId', model: 'subCategory' }]
+                },
+                {
+                        path: 'services.serviceId',
+                        model: 'Service',
+                        populate: [{ path: 'mainCategoryId categoryId subCategoryId', model: 'mainCategory' }, { path: 'categoryId', model: 'Category' }, { path: 'subCategoryId', model: 'subCategory' }]
+                },
+                {
+                        path: 'packages.services',
+                        populate: [{ path: 'serviceId', model: 'Service' }]
+                },
+                {
+                        path: 'addOnServices.serviceId',
+                        populate: [{ path: 'mainCategoryId categoryId subCategoryId', model: 'mainCategory' }, { path: 'categoryId', model: 'Category' }, { path: 'subCategoryId', model: 'subCategory' }]
+                }])
 
                 if (!order) {
                         return res.status(404).json({ status: 404, message: "Order not found", data: {} });
@@ -1508,24 +1496,83 @@ exports.getOrderById = async (req, res) => {
         }
 };
 exports.updateOrderStatus = async (req, res) => {
-        const { status } = req.body;
-        const orderId = req.params.id;
-
         try {
-                const updatedOrder = await orderModel.findByIdAndUpdate(
-                        orderId,
-                        { serviceStatus: status },
-                        { new: true }
-                );
+                const orderId = req.params.id;
+
+                const updatedOrder = await orderModel.findById(orderId);
 
                 if (!updatedOrder) {
-                        return res.status(404).json({ status: 404, message: "Order not found", data: {} });
+                        return res.status(404).json({ status: 404, message: 'order not found', data: null });
                 }
+
+                let otp = newOTP.generate(5, { alphabets: false, upperCase: false, specialChar: false });
+
+                updatedOrder.endTime = new Date();
+                updatedOrder.endOtp = otp;
+
+                await updatedOrder.save();
 
                 return res.status(200).json({ status: 200, message: "Order status updated successfully", data: updatedOrder });
         } catch (error) {
                 console.error("Error updating order status:", error);
                 return res.status(500).json({ status: 500, message: "Server error", data: {} });
+        }
+};
+exports.approveTripEndDetailsVerifyOtp = async (req, res) => {
+        try {
+                const partnerId = req.user._id;
+                const orderId = req.params.id;
+                const { otp, status } = req.body;
+
+                const booking = await orderModel.findById(orderId);
+
+                if (!booking) {
+                        return res.status(404).json({ status: 404, message: 'order not found', data: null });
+                }
+
+                const userId = booking.userId;
+
+                const user = await User.findById(userId);
+                if (!user) {
+                        return res.status(404).send({ message: "User not found" });
+                }
+
+                if (booking.endOtp !== otp) {
+                        return res.status(400).json({ message: "Invalid OTP" });
+                }
+
+                const updatedBooking = await orderModel.findByIdAndUpdate(
+                        orderId,
+                        {
+                                status: status,
+                        },
+                        { new: true }
+                );
+                console.log(userId);
+
+                return res.status(200).send({ status: 200, message: "OTP verified successfully", data: updatedBooking });
+        } catch (err) {
+                console.error(err);
+                return res.status(500).send({ error: "Internal server error" + err.message });
+        }
+};
+exports.approveTripEndDetailsResendOTP = async (req, res) => {
+        try {
+                const partnerId = req.user._id;
+                const { id } = req.params;
+
+                const otp = newOTP.generate(5, { alphabets: false, upperCase: false, specialChar: false });
+
+                const updated = await orderModel.findOneAndUpdate(
+                        { _id: id },
+                        { endOtp: otp },
+                        { new: true }
+                );
+
+                return res.status(200).send({ status: 200, message: "OTP resent", data: updated });
+        } catch (error) {
+                console.error(error);
+                return res.status(500).send({ status: 500, message: "Server error" + error.message });
         }
 };
 exports.addServiceToOrder = async (req, res) => {
