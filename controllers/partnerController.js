@@ -992,7 +992,7 @@ exports.getCurrentRole = async (req, res) => {
 };
 exports.getIdCard = async (req, res) => {
         try {
-                const data = await User.findOne({ _id: req.user._id }).populate('city sector currentRole occupation role');
+                const data = await User.findOne({ _id: req.user._id }).populate('currentRole occupation role');
                 if (!data) {
                         return res.status(404).json({ status: 404, message: "No data found", data: {} });
                 }
