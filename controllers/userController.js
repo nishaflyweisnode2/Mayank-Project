@@ -6328,7 +6328,7 @@ exports.getAllSlots = async (req, res) => {
                 }
 
                 const slots = await Slot.find({ mainCategory: { $in: mainCategories } });
-                const categorizedSlots = {};
+                const categorizedSlots = [];
 
                 mainCategories.forEach(category => {
                         const categoryObjectId = new mongoose.Types.ObjectId(category);
@@ -6354,14 +6354,18 @@ exports.getAllSlots = async (req, res) => {
                         });
 
                         console.log("availableSlots", availableSlots);
-                        categorizedSlots[category] = availableSlots;
+                        let obj = {
+                                mainCategoryId: category,
+                                availableSlots: availableSlots
+                        }
+                        categorizedSlots.push(obj);
 
                 });
 
                 return res.status(200).json({
                         status: 200,
                         message: 'Slots retrieved successfully.',
-                        data: categorizedSlots,
+                        data: categorizedSlots[0],
                 });
         } catch (error) {
                 console.error(error);
@@ -6403,7 +6407,7 @@ exports.getAllSlotsByService = async (req, res) => {
                 }
 
                 const slots = await Slot.find({ mainCategory: { $in: mainCategories } });
-                const categorizedSlots = {};
+                const categorizedSlots = [];
 
                 mainCategories.forEach(category => {
                         const categoryObjectId = new mongoose.Types.ObjectId(category);
@@ -6429,7 +6433,12 @@ exports.getAllSlotsByService = async (req, res) => {
                         });
 
                         console.log("availableSlots", availableSlots);
-                        categorizedSlots[category] = availableSlots;
+                        // categorizedSlots[category] = availableSlots;
+                        let obj = {
+                                mainCategoryId: category,
+                                availableSlots: availableSlots
+                        }
+                        categorizedSlots.push(obj);
                 });
 
                 return res.status(200).json({
@@ -6477,7 +6486,7 @@ exports.getAllSlotsByPackage = async (req, res) => {
                 }
 
                 const slots = await Slot.find({ mainCategory: { $in: mainCategories } });
-                const categorizedSlots = {};
+                const categorizedSlots = [];
 
                 mainCategories.forEach(category => {
                         const categoryObjectId = new mongoose.Types.ObjectId(category);
@@ -6503,7 +6512,12 @@ exports.getAllSlotsByPackage = async (req, res) => {
                         });
 
                         console.log("availableSlots", availableSlots);
-                        categorizedSlots[category] = availableSlots;
+                        // categorizedSlots[category] = availableSlots;
+                        let obj = {
+                                mainCategoryId: category,
+                                availableSlots: availableSlots
+                        }
+                        categorizedSlots.push(obj);
                 });
 
                 return res.status(200).json({
