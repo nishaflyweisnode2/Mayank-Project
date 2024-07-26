@@ -4653,23 +4653,86 @@ exports.getOngoingOrders = async (req, res) => {
         try {
                 const data = await orderModel
                         .find({ userId: req.user._id, serviceStatus: "Pending" })
+                        .populate('packages.packageId')
                         .populate({
-                                path: "freeService.freeServiceId"
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
                         })
                         .populate({
-                                path: "services.serviceId"
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
                         })
                         .populate({
-                                path: "Charges.chargeId",
+                                path: 'services.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
                         })
-                // .populate({
-                //         path: "services.serviceId",
-                //         populate: [
-                //                 {
-                //                         path: "mainCategoryId categoryId subCategoryId",
-                //                 },
-                //         ],
-                // })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.packageId',
+                                model: 'Package',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'packages.services',
+                                populate: {
+                                        path: 'serviceId',
+                                        model: 'Service'
+                                }
+                        })
+                        .populate({
+                                path: 'addOnServices.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'mainCategoryId categoryId subCategoryId',
+                                        model: 'mainCategory'
+                                }
+                        })
+                        .populate({
+                                path: 'addOnServices.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'categoryId',
+                                        model: 'Category'
+                                }
+                        })
+                        .populate({
+                                path: 'addOnServices.serviceId',
+                                model: 'Service',
+                                populate: {
+                                        path: 'subCategoryId',
+                                        model: 'subCategory'
+                                }
+                        })
 
                 if (data.length > 0) {
                         return res.status(200).json({ message: "All orders", data: data });
